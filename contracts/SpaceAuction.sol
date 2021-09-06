@@ -188,7 +188,7 @@ contract SpaceAuction is Ownable {
   }
 
   // called by vote proxy contract as part of EIP1271 contract signing
-  function isValidSignature(bytes32 _hash, bytes memory _signature) public view returns (bool) {
+  function isWinningSignature(bytes32 _hash, bytes memory _signature) public view returns (bool) {
     return winningHashes[_hash];
   }
 
