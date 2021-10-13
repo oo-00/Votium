@@ -15,7 +15,6 @@ contract MultiMerkleStash is Ownable {
   struct claimParam {
       address token;
       uint256 index;
-      address account;
       uint256 amount;
       bytes32[] merkleProof;
   }
@@ -23,7 +22,6 @@ contract MultiMerkleStash is Ownable {
   // environment variables for updateable merkle
   mapping(address => bytes32) public merkleRoot;
   mapping(address => uint256) public update;
-  mapping(address => bool) public enabled;
   // This is a packed array of booleans.
   mapping(address => mapping(uint256 => mapping(uint256 => uint256))) private claimedBitMap;
 
@@ -43,7 +41,7 @@ contract MultiMerkleStash is Ownable {
   }
 
   function claim(address token, uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) public {
-    require(enabled[token], 'Claiming is not enabled.');
+    require(merkleRoot[token] != 0, 'frozen');
     require(!isClaimed(token, index), 'Drop already claimed.');
 
     // Verify the merkle proof.
@@ -56,24 +54,15 @@ contract MultiMerkleStash is Ownable {
     emit Claimed(token, index, amount, account, update[token]);
   }
 
-  function claimMulti(claimParam[] calldata claims) external {
+  function claimMulti(address account, claimParam[] calldata claims) external {
     for(uint256 i=0;i<claims.length;i++) {
-      claim(claims[i].token, claims[i].index, claims[i].account, claims[i].amount, claims[i].merkleProof);
+      claim(claims[i].token, claims[i].index, account, claims[i].amount, claims[i].merkleProof);
     }
   }
 
   // MULTI SIG FUNCTIONS //
 
-  function freeze(address token) public onlyOwner {
-    enabled[token] = false;
-  }
-
-  function unfreeze(address token) public onlyOwner {
-    enabled[token] = true;
-  }
-
   function updateMerkleRoot(address token, bytes32 _merkleRoot) public onlyOwner {
-    require(!enabled[token], 'Claiming currently enabled.');
 
     // Increment the update (simulates the clearing of the claimedBitMap)
     update[token] += 1;
