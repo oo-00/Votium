@@ -1,0 +1,8 @@
+Requires the following node modules:
+
+node-fetch @ version 2.6
+graphql-request
+web3
+ethers
+
+after insalling the above modules, run `node calculateVote.js`
