@@ -5,4 +5,6 @@ graphql-request
 web3
 ethers
 
-after insalling the above modules, run `node calculateVote.js`
+after insalling the above modules, edit calculateVote.js to provide your INFURA api key
+
+save and then run `node calculateVote.js`
