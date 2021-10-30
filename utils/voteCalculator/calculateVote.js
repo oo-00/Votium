@@ -300,14 +300,15 @@ const main = async () => {
   // display results
   total_usd = 0;
   total_votes = 0;
-  console.log("┌───────────────┬───────────────┬───────────────┬──────────┐\n│      POOL     │    REWARDS    │     VOTES     │  $/VOTE  │\n├───────────────┼───────────────┼───────────────┼──────────┤")
-  for(i in poolShot) {
+  console.log("┌───────────────┬───────────────┬───────────────┬────────────┐\n│      POOL     │    REWARDS    │     VOTES     │   $/VOTE   │\n├───────────────┼───────────────┼───────────────┼────────────┤")
+  for(i in rewards) {
+		if(poolShot[i] == undefined) { poolShot[i] = 0; }
     price_per = rewards[i].total_value/poolShot[i];
-    console.log("│ "+proposal.choices[i-1].padEnd(14, ' ')+"│ $"+rewards[i].total_value.toFixed(2).padStart(12, ' ')+" │ "+poolShot[i].toFixed(2).padStart(12, ' ')+"  │ $"+price_per.toFixed(5)+" │");
+    console.log("│ "+proposal.choices[i-1].padEnd(14, ' ')+"│ $"+rewards[i].total_value.toFixed(2).padStart(12, ' ')+" │ "+poolShot[i].toFixed(2).padStart(12, ' ')+"  │ $"+price_per.toFixed(5).padStart(9, ' ')+" │");
     total_usd += rewards[i].total_value;
     total_votes += poolShot[i];
   }
-  console.log("└───────────────┴───────────────┴───────────────┴──────────┘");
+  console.log("└───────────────┴───────────────┴───────────────┴────────────┘");
   console.log("\nTotal Rewards:       $"+total_usd.toFixed(2));
   console.log("Total Votes:         "+total_votes.toFixed(2));
   console.log("Average $ per vote:  $"+(total_usd/total_votes).toFixed(5));
