@@ -1,10 +1,7 @@
-Requires the following node modules:
+save this folder
 
-node-fetch @ version 2.6
-graphql-request
-web3
-ethers
+run `npm i`
 
-after insalling the above modules, edit calculateVote.js to provide your INFURA api key
+edit calculateVote.js to provide your infura key, or edit provider to another eth node
 
 save and then run `node calculateVote.js`
