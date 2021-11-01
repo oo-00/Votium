@@ -1,11 +1,12 @@
 {
-  "name": "votium-vote-calc",
-  "version": "1.0.0",
-  "description": "live snapshot vote calculator for votium rewards",
-  "main": "calculateVote.js",
+	"name": "votium-vote-calc",
+	"version": "1.0.0",
+	"description": "live snapshot vote calculator for votium rewards",
+	"main": "calculateVote.js",
 	"dependencies": {
 		"ethers": "^5.4.7",
-		"graphql-request": "^3.5.0",
+		"graphql": "^15.6.0",
+		"graphql-request": "^3.6.1",
 		"node-fetch": "^2.6.5",
 		"web3": "^1.5.3"
 	}
