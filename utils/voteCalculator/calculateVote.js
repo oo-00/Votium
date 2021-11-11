@@ -34,8 +34,8 @@ process.stdin.on('data', (input) => {
 
 async function getDepositEvents(id) {
   try {
-		let depres = [];
-		mainnetContract = await new ethers.Contract(
+    let depres = [];
+    mainnetContract = await new ethers.Contract(
         mainnetAddress,
         votiumABI,
         mainnetProvider
@@ -47,36 +47,34 @@ async function getDepositEvents(id) {
         null
     );
     let mainres = await mainnetContract.queryFilter(filter);
-		for(i in mainres) {
-			obj = [];
-			obj[0] = mainres[i].args[0];
-			obj[1] = mainres[i].args[1];
-			obj[2] = mainres[i].args[2];
-			obj[3] = mainres[i].args[3];
-			obj[4] = 1;
-			depres.push(obj);
-		}
-		fantomContract = await new ethers.Contract(
-				fantomAddress,
-				votiumABI,
-				fantomProvider
-		);
-		filter = await fantomContract.filters.Bribed(
-				null,
-				null,
-				web3.utils.keccak256(id),
-				null
-		);
-		let ftmres = await fantomContract.queryFilter(filter);
-		for(i in ftmres) {
-			obj = [];
-			obj[0] = ftmres[i].args[0];
-			obj[1] = ftmres[i].args[1];
-			obj[2] = ftmres[i].args[2];
-			obj[3] = ftmres[i].args[3];
-			obj[4] = 1;
-			depres.push(obj);
-		}
+    for(i in mainres) {
+      obj = [];
+      obj[0] = mainres[i].args[0];
+      obj[1] = mainres[i].args[1];
+      obj[2] = mainres[i].args[2];
+      obj[3] = mainres[i].args[3];
+      depres.push(obj);
+    }
+    fantomContract = await new ethers.Contract(
+        fantomAddress,
+        votiumABI,
+        fantomProvider
+    );
+    filter = await fantomContract.filters.Bribed(
+        null,
+        null,
+        web3.utils.keccak256(id),
+        null
+    );
+    let ftmres = await fantomContract.queryFilter(filter);
+    for(i in ftmres) {
+      obj = [];
+      obj[0] = ftmres[i].args[0];
+      obj[1] = ftmres[i].args[1];
+      obj[2] = ftmres[i].args[2];
+      obj[3] = ftmres[i].args[3];
+      depres.push(obj);
+    }
     return depres;
   } catch(e) {
     console.log(e);
@@ -335,7 +333,7 @@ const main = async () => {
   total_votes = 0;
   console.log("┌───────────────┬───────────────┬───────────────┬────────────┐\n│      POOL     │    REWARDS    │     VOTES     │   $/VOTE   │\n├───────────────┼───────────────┼───────────────┼────────────┤")
   for(i in rewards) {
-		if(poolShot[i] == undefined) { poolShot[i] = 0; }
+    if(poolShot[i] == undefined) { poolShot[i] = 0; }
     price_per = rewards[i].total_value/poolShot[i];
     console.log("│ "+proposal.choices[i-1].padEnd(14, ' ')+"│ $"+rewards[i].total_value.toFixed(2).padStart(12, ' ')+" │ "+poolShot[i].toFixed(2).padStart(12, ' ')+"  │ $"+price_per.toFixed(5).padStart(9, ' ')+" │");
     total_usd += rewards[i].total_value;
