@@ -5,17 +5,19 @@ const { ethers } = require("ethers");
 const web3 = new Web3();
 
 
-////////////////////////////////////////////////////////////////////////////////////////////
-//          EDIT PROVIDER AS NEEDED:                                                     //
-                                                                                        //
-const INFURA_KEY = "################################";                                 //
-const provider = new ethers.providers.InfuraProvider("mainnet", INFURA_KEY);          //
-                                                                                     //
-//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////
+//          EDIT PROVIDER AS NEEDED:                                                       //
+                                                                                          //
+const INFURA_KEY = "################################";                                   //
+const mainnetProvider = new ethers.providers.InfuraProvider("mainnet", INFURA_KEY);     //
+const fantomProvider = new ethers.providers.JsonRpcProvider("https://rpc.ftm.tools/"); //
+                                                                                      //
+///////////////////////////////////////////////////////////////////////////////////////
 
 const votiumABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"_token","type":"address"},{"indexed":false,"internalType":"uint256","name":"_amount","type":"uint256"},{"indexed":true,"internalType":"bytes32","name":"_proposal","type":"bytes32"},{"indexed":false,"internalType":"uint256","name":"_choiceIndex","type":"uint256"}],"name":"Bribed","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes32","name":"_proposal","type":"bytes32"}],"name":"Initiated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"_member","type":"address"},{"indexed":false,"internalType":"bool","name":"_approval","type":"bool"}],"name":"ModifiedTeam","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_token","type":"address"},{"indexed":false,"internalType":"address","name":"_distributor","type":"address"}],"name":"UpdatedDistributor","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"_feeAmount","type":"uint256"}],"name":"UpdatedFee","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bool","name":"_requireWhitelist","type":"bool"}],"name":"WhitelistRequirement","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"_token","type":"address"}],"name":"Whitelisted","type":"event"},{"inputs":[],"name":"DENOMINATOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_hash","type":"bytes32"}],"name":"approveDelegationVote","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"approvedTeam","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"delegationHash","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_token","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"},{"internalType":"bytes32","name":"_proposal","type":"bytes32"},{"internalType":"uint256","name":"_choiceIndex","type":"uint256"}],"name":"depositBribe","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_proposal","type":"bytes32"},{"internalType":"uint256","name":"_deadline","type":"uint256"},{"internalType":"uint256","name":"_maxIndex","type":"uint256"}],"name":"initiateProposal","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_hash","type":"bytes32"},{"internalType":"bytes","name":"_signature","type":"bytes"}],"name":"isWinningSignature","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_member","type":"address"},{"internalType":"bool","name":"_approval","type":"bool"}],"name":"modifyTeam","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"platformFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"proposalInfo","outputs":[{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"uint256","name":"maxIndex","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"requireWhitelist","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_requireWhitelist","type":"bool"}],"name":"setWhitelistRequired","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"tokenInfo","outputs":[{"internalType":"bool","name":"whitelist","type":"bool"},{"internalType":"address","name":"distributor","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_token","type":"address"}],"name":"transferToDistributor","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_token","type":"address"},{"internalType":"address","name":"_distributor","type":"address"}],"name":"updateDistributor","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_feeAddress","type":"address"}],"name":"updateFeeAddress","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_feeAmount","type":"uint256"}],"name":"updateFeeAmount","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_token","type":"address"}],"name":"whitelistToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"_tokens","type":"address[]"}],"name":"whitelistTokens","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
-const votiumAddress = '0x19BBC3463Dd8d07f55438014b021Fb457EBD4595';
+const mainnetAddress = '0x19BBC3463Dd8d07f55438014b021Fb457EBD4595';
+const fantomAddress  = '0xB8834B76ADd8fA60CeC20f7c82F7489AC6CdA5B9';
 const space = 'cvx.eth';
 const snapshot_endpoint = "https://hub.snapshot.org/graphql";
 const SNAPSHOT_SCORE_API = 'https://score.snapshot.org/api/scores';
@@ -32,19 +34,50 @@ process.stdin.on('data', (input) => {
 
 async function getDepositEvents(id) {
   try {
-    votiumContract = await new ethers.Contract(
-        votiumAddress,
+		let depres = [];
+		mainnetContract = await new ethers.Contract(
+        mainnetAddress,
         votiumABI,
-        provider
+        mainnetProvider
     );
-    let filter = await votiumContract.filters.Bribed(
+    let filter = await mainnetContract.filters.Bribed(
         null,
         null,
         web3.utils.keccak256(id),
         null
     );
-    let res2 = await votiumContract.queryFilter(filter);
-    return res2;
+    let mainres = await mainnetContract.queryFilter(filter);
+		for(i in mainres) {
+			obj = [];
+			obj[0] = mainres[i].args[0];
+			obj[1] = mainres[i].args[1];
+			obj[2] = mainres[i].args[2];
+			obj[3] = mainres[i].args[3];
+			obj[4] = 1;
+			depres.push(obj);
+		}
+		fantomContract = await new ethers.Contract(
+				fantomAddress,
+				votiumABI,
+				fantomProvider
+		);
+		filter = await fantomContract.filters.Bribed(
+				null,
+				null,
+				web3.utils.keccak256(id),
+				null
+		);
+		let ftmres = await fantomContract.queryFilter(filter);
+		for(i in ftmres) {
+			obj = [];
+			obj[0] = ftmres[i].args[0];
+			obj[1] = ftmres[i].args[1];
+			obj[2] = ftmres[i].args[2];
+			obj[3] = ftmres[i].args[3];
+			obj[4] = 1;
+			depres.push(obj);
+		}
+    return depres;
   } catch(e) {
     console.log(e);
   }
@@ -242,9 +275,9 @@ const main = async () => {
   res = await getDepositEvents(proposals[Number(choice)].id);
   rewards = {};
   for(i in res) {
-    address = res[i].args._token;
-    amount = res[i].args._amount.toString();
-    pool = Number(res[i].args._choiceIndex.toString())+1;
+    address = res[i][0];
+    amount = res[i][1].toString();
+    pool = Number(res[i][3].toString())+1;
     if(rewards[pool] == null || rewards[pool] == undefined) { rewards[pool] = {}; }
     if(rewards[pool][address] == null || rewards[pool][address] == undefined) { rewards[pool][address] = 0; }
     if(rewards[pool].total_value == null || rewards[pool].total_value == undefined) { rewards[pool].total_value = 0; }
@@ -262,13 +295,13 @@ const main = async () => {
   var proposal = await grabProposal(toGrab);
   var snapshot_block = proposal.snapshot;
   var voters = await getVoters(toGrab);
+
   var votersCheck = [];
   for (var i in voters) {
       votersCheck.push(voters[i].voter);
   }
 
   var voterScores = await getVoteScores(snapshot_block, votersCheck, proposal.strategies);
-
   poolShot = {};
   for(i=0;i<voters.length;i++) {
     userPower = voterScores[voters[i].voter];
