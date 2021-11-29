@@ -8,7 +8,7 @@ const web3 = new Web3();
 //////////////////////////////////////////////////////////////////////////////////////////////
 //          EDIT PROVIDER AS NEEDED:                                                       //
                                                                                           //
-const INFURA_KEY = "################################";                                   //
+const INFURA_KEY = "9230b591147c4b379aa7e42b47ddd716";                                   //
 const mainnetProvider = new ethers.providers.InfuraProvider("mainnet", INFURA_KEY);     //
 const fantomProvider = new ethers.providers.JsonRpcProvider("https://rpc.ftm.tools/"); //
                                                                                       //
@@ -34,8 +34,8 @@ process.stdin.on('data', (input) => {
 
 async function getDepositEvents(id) {
   try {
-    let depres = [];
-    mainnetContract = await new ethers.Contract(
+		let depres = [];
+		mainnetContract = await new ethers.Contract(
         mainnetAddress,
         votiumABI,
         mainnetProvider
@@ -47,34 +47,34 @@ async function getDepositEvents(id) {
         null
     );
     let mainres = await mainnetContract.queryFilter(filter);
-    for(i in mainres) {
-      obj = [];
-      obj[0] = mainres[i].args[0];
-      obj[1] = mainres[i].args[1];
-      obj[2] = mainres[i].args[2];
-      obj[3] = mainres[i].args[3];
-      depres.push(obj);
-    }
-    fantomContract = await new ethers.Contract(
-        fantomAddress,
-        votiumABI,
-        fantomProvider
-    );
-    filter = await fantomContract.filters.Bribed(
-        null,
-        null,
-        web3.utils.keccak256(id),
-        null
-    );
-    let ftmres = await fantomContract.queryFilter(filter);
-    for(i in ftmres) {
-      obj = [];
-      obj[0] = ftmres[i].args[0];
-      obj[1] = ftmres[i].args[1];
-      obj[2] = ftmres[i].args[2];
-      obj[3] = ftmres[i].args[3];
-      depres.push(obj);
-    }
+		for(i in mainres) {
+			obj = [];
+			obj[0] = mainres[i].args[0];
+			obj[1] = mainres[i].args[1];
+			obj[2] = mainres[i].args[2];
+			obj[3] = mainres[i].args[3];
+			depres.push(obj);
+		}
+		fantomContract = await new ethers.Contract(
+				fantomAddress,
+				votiumABI,
+				fantomProvider
+		);
+		filter = await fantomContract.filters.Bribed(
+				null,
+				null,
+				web3.utils.keccak256(id),
+				null
+		);
+		let ftmres = await fantomContract.queryFilter(filter);
+		for(i in ftmres) {
+			obj = [];
+			obj[0] = ftmres[i].args[0];
+			obj[1] = ftmres[i].args[1];
+			obj[2] = ftmres[i].args[2];
+			obj[3] = ftmres[i].args[3];
+			depres.push(obj);
+		}
     return depres;
   } catch(e) {
     console.log(e);
@@ -275,11 +275,16 @@ const main = async () => {
   for(i in res) {
     address = res[i][0];
     amount = res[i][1].toString();
+		for(f in tokenOptions) {
+			if(tokenOptions[f]["value"].toUpperCase() == address.toUpperCase()) {
+				decimals = tokenOptions[f]["decimals"];
+			}
+		}
     pool = Number(res[i][3].toString())+1;
     if(rewards[pool] == null || rewards[pool] == undefined) { rewards[pool] = {}; }
     if(rewards[pool][address] == null || rewards[pool][address] == undefined) { rewards[pool][address] = 0; }
     if(rewards[pool].total_value == null || rewards[pool].total_value == undefined) { rewards[pool].total_value = 0; }
-    token_amount = Number(web3.utils.fromWei(amount, 'ether'));
+    token_amount = Number(amount) / Math.pow(10, decimals);
     rewards[pool][address] += token_amount;
     rewards[pool].total_value += token_amount*prices[address.toUpperCase()];
   }
@@ -333,7 +338,7 @@ const main = async () => {
   total_votes = 0;
   console.log("┌───────────────┬───────────────┬───────────────┬────────────┐\n│      POOL     │    REWARDS    │     VOTES     │   $/VOTE   │\n├───────────────┼───────────────┼───────────────┼────────────┤")
   for(i in rewards) {
-    if(poolShot[i] == undefined) { poolShot[i] = 0; }
+		if(poolShot[i] == undefined) { poolShot[i] = 0; }
     price_per = rewards[i].total_value/poolShot[i];
     console.log("│ "+proposal.choices[i-1].padEnd(14, ' ')+"│ $"+rewards[i].total_value.toFixed(2).padStart(12, ' ')+" │ "+poolShot[i].toFixed(2).padStart(12, ' ')+"  │ $"+price_per.toFixed(5).padStart(9, ' ')+" │");
     total_usd += rewards[i].total_value;
