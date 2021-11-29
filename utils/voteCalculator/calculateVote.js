@@ -8,7 +8,7 @@ const web3 = new Web3();
 //////////////////////////////////////////////////////////////////////////////////////////////
 //          EDIT PROVIDER AS NEEDED:                                                       //
                                                                                           //
-const INFURA_KEY = "9230b591147c4b379aa7e42b47ddd716";                                   //
+const INFURA_KEY = "";                                   //
 const mainnetProvider = new ethers.providers.InfuraProvider("mainnet", INFURA_KEY);     //
 const fantomProvider = new ethers.providers.JsonRpcProvider("https://rpc.ftm.tools/"); //
                                                                                       //
