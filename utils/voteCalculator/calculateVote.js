@@ -4,11 +4,12 @@ const Web3 = require('web3');
 const { ethers } = require("ethers");
 const web3 = new Web3();
 
+const infura_json = require("./infura.json");
+const INFURA_KEY = infura_json.api_key;
 
-//////////////////////////////////////////////////////////////////////////////////////////////
-//          EDIT PROVIDER AS NEEDED:                                                       //
-                                                                                          //
-const INFURA_KEY = "";                                   //
+/////////////////////////////////////////////////////////////////////////////////////////////
+//          EDIT PROVIDER AS NEEDED:                                                      //
+                                                                                         //
 const mainnetProvider = new ethers.providers.InfuraProvider("mainnet", INFURA_KEY);     //
 const fantomProvider = new ethers.providers.JsonRpcProvider("https://rpc.ftm.tools/"); //
                                                                                       //
@@ -254,7 +255,7 @@ const main = async () => {
 
   // SELECT PROPOSAL
 
-  query = "{\"query\":\"query Proposals { proposals ( first: 20, skip: 0, where: { space_in: [\\\"cvx.eth\\\"], state: \\\"any\\\" }, orderBy: \\\"created\\\", orderDirection: desc ) { id title body choices start end snapshot state author type space { id name } }}\",\"variables\":null,\"operationName\":\"Proposals\"}";
+  query = "{\"query\":\"query Proposals { proposals ( first: 1000, skip: 0, where: { space_in: [\\\"cvx.eth\\\"], state: \\\"any\\\" }, orderBy: \\\"created\\\", orderDirection: desc ) { id title body choices start end snapshot state author type space { id name } }}\",\"variables\":null,\"operationName\":\"Proposals\"}";
   proposals = await getProposals(query);
   if(proposals == null) { process.exit(); }
   for(i=0;i<proposals.length;i++) {
