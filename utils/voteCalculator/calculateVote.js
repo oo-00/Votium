@@ -82,33 +82,6 @@ async function getDepositEvents(id) {
   }
 }
 
-const metaData = [
-  {
-    "name": "erc20-balance-of",
-    "params": {
-      "symbol": "CVX",
-      "address": "0xD18140b4B819b895A3dba5442F959fA44994AF50",
-      "decimals": 18
-    }
-  },
-  {
-    "name": "delegation",
-    "params": {
-      "symbol": "CVX",
-      "strategies": [
-        {
-          "name": "erc20-balance-of",
-          "params": {
-            "symbol": "CVX",
-            "address": "0xD18140b4B819b895A3dba5442F959fA44994AF50",
-            "decimals": 18
-          }
-        }
-      ]
-    }
-  }
-];
-
 
 const grabProposal = async (hashId) => {
   const proposalQuery = gql`
