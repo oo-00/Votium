@@ -162,6 +162,7 @@ const getVoteScores = async (block, voteAddresses, strategy) => {
     body: JSON.stringify({ params })
   };
   var response = await fetch(SNAPSHOT_SCORE_API, init);
+
   var obj = await response.json();
   var totalAddresses = {};
   var totalScore = 0;
@@ -278,19 +279,30 @@ const main = async () => {
       votersCheck.push(voters[i].voter);
   }
 
-  var voterScores = await getVoteScores(snapshot_block, votersCheck, proposal.strategies);
-  poolShot = {};
-  for(i=0;i<voters.length;i++) {
-    userPower = voterScores[voters[i].voter];
-      userWeightDenominator = 0;
-      for(n in voters[i].choice) {
-        userWeightDenominator += voters[i].choice[n];
-      }
-      for(n in voters[i].choice) {
-        if(poolShot[n.toString()] == null || poolShot[n.toString()] == undefined) { poolShot[n.toString()] = 0; }
-        poolShot[n.toString()] += voterScores[voters[i].voter]*(voters[i].choice[n]/userWeightDenominator);
-      }
-  }
+	poolShot = {};
+	var checked = {};
+	while(votersCheck.length > 0) {
+	  var voterScores = await getVoteScores(snapshot_block, votersCheck, proposal.strategies);
+		var votersRecheck = [];
+	  for(i=0;i<voters.length;i++) {
+			if(voterScores[voters[i].voter] == undefined && checked[voters[i].voter] == undefined) { votersRecheck.push(voters[i].voter); } else if(checked[voters[i].voter] == undefined) {
+		    userPower = voterScores[voters[i].voter];
+	      userWeightDenominator = 0;
+	      for(n in voters[i].choice) {
+	        userWeightDenominator += voters[i].choice[n];
+	      }
+	      for(n in voters[i].choice) {
+	        if(poolShot[n.toString()] == null || poolShot[n.toString()] == undefined) { poolShot[n.toString()] = 0; }
+	        poolShot[n.toString()] += voterScores[voters[i].voter]*(voters[i].choice[n]/userWeightDenominator);
+	      }
+				checked[voters[i].voter] = 1;
+			}
+	  }
+		votersCheck = votersRecheck;
+		if(votersCheck.length > 0) {
+			console.log(votersCheck.length+" address failed to load. rechecking");
+		}
+	}
 
   // Calculate rewards
 
@@ -310,15 +322,15 @@ const main = async () => {
   // display results
   total_usd = 0;
   total_votes = 0;
-  console.log("┌───────────────┬───────────────┬───────────────┬────────────┐\n│      POOL     │    REWARDS    │     VOTES     │   $/VOTE   │\n├───────────────┼───────────────┼───────────────┼────────────┤")
+  console.log("┌───────────────────┬───────────────┬───────────────┬────────────┐\n│        POOL       │    REWARDS    │     VOTES     │   $/VOTE   │\n├───────────────────┼───────────────┼───────────────┼────────────┤")
   for(i in rewards) {
 		if(poolShot[i] == undefined) { poolShot[i] = 0; }
     price_per = rewards[i].total_value/poolShot[i];
-    console.log("│ "+proposal.choices[i-1].padEnd(14, ' ')+"│ $"+rewards[i].total_value.toFixed(2).padStart(12, ' ')+" │ "+poolShot[i].toFixed(2).padStart(12, ' ')+"  │ $"+price_per.toFixed(5).padStart(9, ' ')+" │");
+    console.log("│ "+proposal.choices[i-1].padEnd(18, ' ')+"│ $"+rewards[i].total_value.toFixed(2).padStart(12, ' ')+" │ "+poolShot[i].toFixed(2).padStart(12, ' ')+"  │ $"+price_per.toFixed(5).padStart(9, ' ')+" │");
     total_usd += rewards[i].total_value;
     total_votes += poolShot[i];
   }
-  console.log("└───────────────┴───────────────┴───────────────┴────────────┘");
+  console.log("└───────────────────┴───────────────┴───────────────┴────────────┘");
   console.log("\nTotal Rewards:       $"+total_usd.toFixed(2));
   console.log("Total Votes:         "+total_votes.toFixed(2));
   console.log("Average $ per vote:  $"+(total_usd/total_votes).toFixed(5));
