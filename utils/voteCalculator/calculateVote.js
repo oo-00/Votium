@@ -281,27 +281,22 @@ const main = async () => {
 
 	poolShot = {};
 	var checked = {};
-	while(votersCheck.length > 0) {
-	  var voterScores = await getVoteScores(snapshot_block, votersCheck, proposal.strategies);
-		var votersRecheck = [];
-	  for(i=0;i<voters.length;i++) {
-			if(voterScores[voters[i].voter] == undefined && checked[voters[i].voter] == undefined) { votersRecheck.push(voters[i].voter); } else if(checked[voters[i].voter] == undefined) {
-		    userPower = voterScores[voters[i].voter];
-	      userWeightDenominator = 0;
-	      for(n in voters[i].choice) {
-	        userWeightDenominator += voters[i].choice[n];
-	      }
-	      for(n in voters[i].choice) {
-	        if(poolShot[n.toString()] == null || poolShot[n.toString()] == undefined) { poolShot[n.toString()] = 0; }
-	        poolShot[n.toString()] += voterScores[voters[i].voter]*(voters[i].choice[n]/userWeightDenominator);
-	      }
-				checked[voters[i].voter] = 1;
-			}
-	  }
-		votersCheck = votersRecheck;
-		if(votersCheck.length > 0) {
-			console.log(votersCheck.length+" address failed to load. rechecking");
+  var voterScores = await getVoteScores(snapshot_block, votersCheck, proposal.strategies);
+  for(i=0;i<voters.length;i++) {
+		if(voterScores[voters[i].voter] != undefined) {
+	    userPower = voterScores[voters[i].voter];
+      userWeightDenominator = 0;
+      for(n in voters[i].choice) {
+        userWeightDenominator += voters[i].choice[n];
+      }
+      for(n in voters[i].choice) {
+        if(poolShot[n.toString()] == null || poolShot[n.toString()] == undefined) { poolShot[n.toString()] = 0; }
+        poolShot[n.toString()] += voterScores[voters[i].voter]*(voters[i].choice[n]/userWeightDenominator);
+      }
 		}
+  }
+	if(votersCheck.length > 0) {
+		console.log(votersCheck.length+" address failed to load. rechecking");
 	}
 
   // Calculate rewards
