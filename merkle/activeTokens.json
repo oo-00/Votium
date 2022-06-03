@@ -1,0 +1,176 @@
+[
+  {
+    "value": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "label": "weth",
+    "symbol": "WETH",
+    "decimals": 18
+  },
+  {
+    "value": "0x6b175474e89094c44da98b954eedeac495271d0f",
+    "label": "dai",
+    "symbol": "DAI",
+    "decimals": 18
+  },
+  {
+    "value": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+    "label": "curve-dao-token",
+    "symbol": "CRV",
+    "decimals": 18
+  },
+  {
+    "value": "0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f",
+    "label": "havven",
+    "symbol": "SNX",
+    "decimals": 18
+  },
+  {
+    "value": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+    "label": "lido-dao",
+    "symbol": "LDO",
+    "decimals": 18
+  },
+  {
+    "value": "0x674c6ad92fd080e4004b2312b45f796a192d27a0",
+    "label": "neutrino",
+    "symbol": "USDN",
+    "decimals": 18
+  },
+  {
+    "value": "0xdbdb4d16eda451d0503b854cf79d55697f90c8df",
+    "label": "alchemix",
+    "symbol": "ALCX",
+    "decimals": 18
+  },
+  {
+    "value": "0x853d955acef822db058eb8505911ed77f175b99e",
+    "label": "frax",
+    "symbol": "FRAX",
+    "decimals": 18
+  },
+  {
+    "value": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+    "label": "frax-share",
+    "symbol": "FXS",
+    "decimals": 18
+  },
+  {
+    "value": "0x090185f2135308bad17527004364ebcc2d37e5f6",
+    "label": "spell-token",
+    "symbol": "SPELL",
+    "decimals": 18
+  },
+  {
+    "value": "0x3472a5a71965499acd81997a54bba8d852c6e53d",
+    "label": "badger-dao",
+    "symbol": "BADGER",
+    "decimals": 18
+  },
+  {
+    "value": "0xdB25f211AB05b1c97D595516F45794528a807ad8",
+    "label": "stasis-eurs",
+    "symbol": "EURS",
+    "decimals": 2
+  },
+  {
+    "value": "0xa3bed4e1c75d00fa6f4e5e6922db7261b5e9acd2",
+    "label": "meta",
+    "symbol": "MTA",
+    "decimals": 18
+  },
+  {
+    "value": "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
+    "label": "convex-finance",
+    "symbol": "CVX",
+    "decimals": 18
+  },
+  {
+    "value": "0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B",
+    "label": "tribe-2",
+    "symbol": "TRIBE",
+    "decimals": 18
+  },
+  {
+    "value": "0xbd31ea8212119f94a611fa969881cba3ea06fa3d",
+    "label": "terra-luna",
+    "symbol": "LUNA",
+    "decimals": 6
+  },
+  {
+    "value": "0x8207c1ffc5b6804f6024322ccf34f29c3541ae26",
+    "label": "origin-protocol",
+    "symbol": "OGN",
+    "decimals": 18
+  },
+  {
+    "value": "0x31429d1856ad1377a8a0079410b297e1a9e214c2",
+    "label": "angle-protocol",
+    "symbol": "ANGLE",
+    "decimals": 18
+  },
+  {
+    "value": "0x03ab458634910aad20ef5f1c8ee96f1d6ac54919",
+    "label": "rai",
+    "symbol": "RAI",
+    "decimals": 18
+  },
+  {
+    "value": "0x6243d8cea23066d098a15582d81a598b4e8391f4",
+    "label": "reflexer-ungovernance-token",
+    "symbol": "FLX",
+    "decimals": 18
+  },
+	{
+    "value": "0xcdf7028ceab81fa0c6971208e83fa7872994bee5",
+    "label": "threshold-network-token",
+    "symbol": "T",
+    "decimals": 18
+  },
+	{
+    "value": "0xa693B19d2931d498c5B318dF961919BB4aee87a5",
+    "label": "terrausd-wormhole",
+    "symbol": "UST",
+    "decimals": 6
+  },
+	{
+    "value": "0x3ec8798b81485a254928b70cda1cf0a2bb0b74d7",
+    "label": "gro-dao-token",
+    "symbol": "GRO",
+    "decimals": 18
+  },
+	{
+		"value": "0x41D5D79431A913C4aE7d69a668ecdfE5fF9DFB68",
+		"label": "inverse-finance",
+		"symbol": "INV",
+		"decimals": 18
+	},
+	{
+		"value": "0xb620be8a1949aa9532e6a3510132864ef9bc3f82",
+		"label": "lend-flare-dao-token",
+		"symbol": "LFT",
+		"decimals": 18
+	},
+	{
+		"value": "0x01ba67aac7f75f647d94220cc98fb30fcc5105bf",
+		"label": "lyra-finance",
+		"symbol": "LYRA",
+		"decimals": 18
+	},
+	{
+		"value": "0xE80C0cd204D654CEbe8dd64A4857cAb6Be8345a3",
+		"label": "jpeg-d",
+		"symbol": "JPEG",
+		"decimals": 18
+	},
+	{
+		"value": "0xaf5191b0de278c7286d6c7cc6ab6bb8a73ba2cd6",
+		"label": "stargate-finance",
+		"symbol": "STG",
+		"decimals": 18
+	},
+	{
+		"value": "0x2ebff165cb363002c5f9cbcfd6803957ba0b7208",
+		"label": "geist-finance",
+		"symbol": "WGEIST",
+		"decimals": 18
+	},
+]
