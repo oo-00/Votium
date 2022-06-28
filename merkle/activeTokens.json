@@ -166,5 +166,11 @@
 		"label": "geist-finance",
 		"symbol": "WGEIST",
 		"decimals": 18
+	},
+	{
+		"value": "0x6810e776880C02933D47DB1b9fc05908e5386b96",
+		"label": "gnosis",
+		"symbol": "GNO",
+		"decimals": 18
 	}
 ]
