@@ -172,5 +172,11 @@
 		"label": "gnosis",
 		"symbol": "GNO",
 		"decimals": 18
+	},
+	{
+		"value": "0x0000000000085d4780B73119b644AE5ecd22b376",
+		"label": "true-usd",
+		"symbol": "TUSD",
+		"decimals": 18
 	}
 ]
