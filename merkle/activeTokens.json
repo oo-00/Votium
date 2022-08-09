@@ -178,5 +178,17 @@
 		"label": "true-usd",
 		"symbol": "TUSD",
 		"decimals": 18
+	},
+	{
+		"value": "0x4332f8A38f14BD3D8D1553aF27D7c7Ac6C27278D",
+		"label": "ape-finance",
+		"symbol": "APEFI",
+		"decimals": 18
+	},
+	{
+		"value": "0x0C10bF8FcB7Bf5412187A595ab97a3609160b5c6",
+		"label": "usdd",
+		"symbol": "USDD",
+		"decimals": 18
 	}
 ]
