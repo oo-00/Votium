@@ -190,5 +190,11 @@
 		"label": "usdd",
 		"symbol": "USDD",
 		"decimals": 18
+	},
+	{
+		"value": "0x62b9c7356a2dc64a1969e19c23e4f579f9810aa7",
+		"label": "convex-crv",
+		"symbol": "cvxCRV",
+		"decimals": 18
 	}
 ]
