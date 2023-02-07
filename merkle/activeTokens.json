@@ -214,6 +214,12 @@
 		"label": "usd-coin",
 		"symbol": "USDC",
 		"decimals": 6
+	},
+	{
+				"value": "0x65Ef703f5594D2573eb71Aaf55BC0CB548492df4",
+				"label": "multichain",
+				"symbol": "MULTI",
+				"decimals": 18
 	}
 
 ]
