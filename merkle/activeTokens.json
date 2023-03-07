@@ -220,6 +220,12 @@
 				"label": "multichain",
 				"symbol": "MULTI",
 				"decimals": 18
+	},
+	{
+		"value": "0x9aE380F0272E2162340a5bB646c354271c0F5cFC",
+		"label": "conic-finance",
+		"symbol": "CNC",
+		"decimals": 18
 	}
 
 ]
