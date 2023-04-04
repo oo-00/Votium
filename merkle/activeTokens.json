@@ -226,6 +226,12 @@
 		"label": "conic-finance",
 		"symbol": "CNC",
 		"decimals": 18
-	}
+	},
+  {
+    "value": "0xA0d69E286B938e21CBf7E51D71F6A4c8918f482F",
+    "label": "electronic-usd",
+    "symbol": "eUSD",
+    "decimals": 18
+  }
 
 ]
