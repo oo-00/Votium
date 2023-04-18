@@ -232,6 +232,18 @@
     "label": "electronic-usd",
     "symbol": "eUSD",
     "decimals": 18
+  },
+  {
+    "value": "0xA1f82E14bc09A1b42710dF1A8a999B62f294e592",
+    "label": "conflux-token",
+    "symbol": "eCFX",
+    "decimals": 18
+  },
+  {
+    "value": "0x402F878BDd1f5C66FdAF0fabaBcF74741B68ac36",
+    "label": "stake-dao-FXS",
+    "symbol": "sdFXS",
+    "decimals": 18
   }
 
 ]
