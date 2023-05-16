@@ -244,6 +244,18 @@
     "label": "stake-dao-FXS",
     "symbol": "sdFXS",
     "decimals": 18
-  }
+  },
+  {
+    "value": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+    "label": "wrapped-beacon-eth",
+    "symbol": "wBETH",
+    "decimals": 18
+  },
+	{
+		"value": "0x9c354503C38481a7A7a51629142963F98eCC12D0",
+		"label": "origin-dollar-governance",
+		"symbol": "OGV",
+		"decimals": 18
+	}
 
 ]
