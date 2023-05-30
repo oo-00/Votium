@@ -256,6 +256,12 @@
 		"label": "origin-dollar-governance",
 		"symbol": "OGV",
 		"decimals": 18
-	}
+	},
+  {
+    "value": "0x2Ebd53d035150f328bd754D6DC66B99B0eDB89aa",
+    "label": "metronome",
+    "symbol": "MET",
+    "decimals": 18
+  }
 
 ]
