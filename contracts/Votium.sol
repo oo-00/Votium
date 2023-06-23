@@ -162,6 +162,28 @@ contract Votium is Ownable {
         }
     }
 
+    // deposit same token to multiple gauges with different amounts in a single round
+    function depositUnevenSplitGauges(address _token, address[] calldata _gauges, uint256[] calldata _amounts, uint256 _round, uint256 _maxPerVote) public {
+        require(_gauges.length == _amounts.length, "!length");
+        uint256 totalDeposit = 0;
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            totalDeposit += _amounts[i];
+        }
+        _takeDeposit(_token, totalDeposit);
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            Incentive memory incentive = Incentive({
+                token: _token,
+                amount: _amounts[i] * (DENOMINATOR - platformFee) / DENOMINATOR,
+                maxPerVote: _maxPerVote,
+                distributed: 0,
+                recycled: 0,
+                depositor: msg.sender
+            });
+            incentives[_round][_gauges[i]].push(incentive);
+            emit NewIncentive(_token, _amounts[i] * (DENOMINATOR - platformFee) / DENOMINATOR, _round, _gauges[i], _maxPerVote);
+        }
+    }
+
 
     // function for depositor to withdraw unprocessed incentives
     // this should only happen if a gauge does not exist or is killed before the round ends
