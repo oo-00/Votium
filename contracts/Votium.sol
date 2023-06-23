@@ -193,7 +193,7 @@ contract Votium is Ownable {
         address _gauge,
         uint256 _incentive
     ) public {
-        require(_round <= lastRoundProcessed, "!roundNotProcessed");
+        require(_round <= lastRoundProcessed || _round+3<activeRound(), "!roundNotProcessed"); // allow 3 rounds for processing before withdraw can be forced
         require(
             incentives[_round][_gauge][_incentive].depositor == msg.sender,
             "!depositor"
