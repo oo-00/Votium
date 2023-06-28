@@ -86,9 +86,9 @@ contract Votium is Ownable {
         if (
             block.timestamp < currentEpoch() + roundDuration - deadlineDuration
         ) {
-            return currentEpoch() / epochDuration;
+            return currentEpoch() / epochDuration - 1348; // 1348 is the votium genesis round
         } else {
-            return currentEpoch() / epochDuration + 1;
+            return currentEpoch() / epochDuration - 1347;
         }
     }
 
@@ -135,6 +135,7 @@ contract Votium is Ownable {
         uint256 _maxPerVote
     ) public {
         require(_numRounds < 8, "!farFuture");
+        require(_numRounds > 1, "!numRounds");
         uint256 rewardTotal = _takeDeposit(_token, _amount);
         uint256 round = activeRound();
         for (uint256 i = 0; i < _numRounds; i++) {
@@ -207,6 +208,7 @@ contract Votium is Ownable {
         uint256 _maxPerVote
     ) public {
         require(_numRounds < 8, "!farFuture");
+        require(_numRounds > 1, "!numRounds");
         uint256 rewardTotal = _takeDeposit(_token, _amount);
         uint256 round = activeRound();
         for (uint256 i = 0; i < _numRounds; i++) {
@@ -239,12 +241,14 @@ contract Votium is Ownable {
     // deposit same token to multiple gauges with different amounts in a single round
     function depositUnevenSplitGauges(
         address _token,
+        uint256 _round,
         address[] calldata _gauges,
         uint256[] calldata _amounts,
-        uint256 _round,
         uint256 _maxPerVote
     ) public {
         require(_gauges.length == _amounts.length, "!length");
+        require(_round >= activeRound(), "!roundEnded");
+        require(_round <= activeRound() + 6, "!farFuture");
         uint256 totalDeposit = 0;
         for (uint256 i = 0; i < _gauges.length; i++) {
             totalDeposit += _amounts[i];
