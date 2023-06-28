@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.2",
+    "@truffle/hdwallet-provider": "^2.1.12",
+    "chai": "^4.3.7",
+    "jsonfile": "^6.1.0",
+    "openzeppelin-test-helpers": "^0.5.1"
+  }
+}
