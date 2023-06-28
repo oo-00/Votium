@@ -118,6 +118,16 @@ const advanceTime = async (secondsElaspse) => {
 }
 const day = 86400;
 
+async function tryCatch(promise, expected) {
+  try {
+    await promise;
+    return false;
+  }
+  catch (e) {
+    return true;
+  }
+}
+
 contract("Deploy System and test", async accounts => {
   it("should deploy contracts and test various functions", async () => {
 
@@ -147,6 +157,8 @@ contract("Deploy System and test", async accounts => {
     let feeAddress = "0x29e3b0E8dF4Ee3f71a62C34847c34E139fC0b297";
     let distributor = "0x378Ba9B73309bE80BF4C2c027aAD799766a7ED5A"
     let multisig = "0xe39b8617D571CEe5e75e1EC6B2bb40DdC8CF6Fa3";
+
+    let maxRounds = 7;
    
     console.log("deployer: " +deployer);
     await unlockAccount(deployer);
@@ -170,6 +182,10 @@ contract("Deploy System and test", async accounts => {
     var notApproved = await votium.approvedTeam(userZ);
     var _feeAddress = await votium.feeAddress();
     var _distributor = await votium.distributor();
+    var round = await votium.activeRound();
+    var fee = await votium.platformFee();
+    round = Number(round)
+    fee = Number(fee)
 
     console.log("owner: " +owner);
     console.log("approved1: " +approved1);
@@ -177,6 +193,8 @@ contract("Deploy System and test", async accounts => {
     console.log("notApproved: " +notApproved);
     console.log("feeAddress: " +_feeAddress);
     console.log("distributor: " +_distributor);
+    console.log("\nround: " +round);
+    console.log("fee: " +fee);
 
     assert(owner == multisig, "owner should be multisig");
     assert(approved1 == true, "userX should be approved");
@@ -192,86 +210,125 @@ contract("Deploy System and test", async accounts => {
     console.log("\n\n >>> test allowlist >>>");
 
     // test allowlist
+    console.log("Check initial allowlist status of CVX")
     var CVXaddress = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b";
     var CVX = await ERC20.at(CVXaddress);
     var tokenAllowed = await votium.tokenAllowed(CVXaddress);
-    console.log("tokenAllowed: " +tokenAllowed);
+    console.log(" tokenAllowed: " +tokenAllowed);
     assert(tokenAllowed == false, "CVX should not be allowed immediately after deployment");
 
     // approve CVX spending from cvxHolder to votium
+    console.log("approve CVX spending from cvxHolder to votium")
     await CVX.approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:cvxHolder});
     var allowance = await CVX.allowance(cvxHolder, votium.address);
-    console.log("allowance: " +allowance);
+    console.log(" allowance: " +allowance);
     assert(allowance == web3.utils.toWei("1000000000", "ether"), "allowance should be 1 billion");
     
     // try to depositIncentive before allowlisting
     console.log("test depositIncentive before allowlisting")
-    round = await votium.activeRound();
-    fail = 0;
-    try{
-      await votium.depositIncentive(CVXaddress, web3.utils.toWei("10000", "ether"), round, userZ, 0, {from:cvxHolder});
-    }catch(e){
-      fail = 1;
-    }
-    assert(fail == 1, "should fail to depositIncentive before allowlisting");
+    fail = await tryCatch(votium.depositIncentive(CVXaddress, web3.utils.toWei("10000", "ether"), round, userZ, 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositIncentive before allowlisting");
+    console.log(" depositIncentive failed as expected");
+    console.log("test depositSplitRounds before allowlisting")
+    fail = await tryCatch(votium.depositSplitRounds(CVXaddress, web3.utils.toWei("10000", "ether"), 2, userZ, 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositSplitRounds before allowlisting");
+    console.log(" depositSplitRounds failed as expected");
+    console.log("test depositSplitGauges before allowlisting")
+    fail = await tryCatch(votium.depositSplitGauges(CVXaddress, web3.utils.toWei("10000", "ether"), round, [userZ,weth], 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositSplitGauges before allowlisting");
+    console.log(" depositSplitGauges failed as expected");
+    console.log("test depositSplitGaugesRounds before allowlisting")
+    fail = await tryCatch(votium.depositSplitGaugesRounds(CVXaddress, web3.utils.toWei("10000", "ether"), 2, [userZ,weth], 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositSplitGaugesRounds before allowlisting");
+    console.log(" depositSplitGaugesRounds failed as expected");
+    console.log("test depositUnevenSplitGauges before allowlisting");
+    fail = await tryCatch(votium.depositUnevenSplitGauges(CVXaddress, round, [userA,userB], [web3.utils.toWei("3000", "ether"),web3.utils.toWei("4000", "ether")], 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositUnevenSplitGauges before allowlisting");
+    console.log(" depositUnevenSplitGauges failed as expected");
 
     // try allowToken CVX from not approved address
-    console.log("test allowToken from not approved address")
-    fail = 0;
-    try {
-      await votium.allowToken(CVXaddress, true, {from:userZ});
-    }catch(e){
-      fail = 1;
-    }
-    tokenAllowed = await votium.tokenAllowed(CVXaddress);
-    console.log("tokenAllowed: " +tokenAllowed);
-    assert(fail == 1, "should fail to allowToken from not approved address");
-    assert(tokenAllowed == false, "CVX should not be allowed after failed allowToken");
+    console.log("test allowToken true from not approved address")
+    fail = await tryCatch(votium.allowToken(CVXaddress, true, {from:userZ}));
+    assert(fail, "should fail to allowToken from not approved address");
+    console.log(" allowToken failed as expected")
 
     // allowlist CVX from approved address
-    console.log("test allowToken from approved address")
+    console.log("test allowToken true from approved address")
     await votium.allowToken(CVXaddress, true, {from:userX});
     tokenAllowed = await votium.tokenAllowed(CVXaddress);
-    console.log("tokenAllowed: " +tokenAllowed);
+    console.log(" tokenAllowed: " +tokenAllowed);
     assert(tokenAllowed == true, "CVX should be allowed after allowToken");
 
-    // try to depositIncentive after allowlisting
-    console.log("test depositIncentive after allowlisting")
-    try {
-      await votium.depositIncentive(CVXaddress, web3.utils.toWei("10000", "ether"), round, userZ, 0, {from:cvxHolder});
-    }catch(e){
-      console.log(e);
+    
+    console.log("\n\n >>> test depositIncentive >>>");
+    depositMinusFee = 0;
+    console.log("test depositIncentive with a round too far into the future")
+    fail = await tryCatch(votium.depositIncentive(CVXaddress, web3.utils.toWei("10000", "ether"), round+maxRounds, userZ, 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositIncentive with a round too far into the future");
+    console.log(" depositIncentive failed as expected");
+    console.log("test depositIncentive with a round in the past")
+    fail = await tryCatch(votium.depositIncentive(CVXaddress, web3.utils.toWei("10000", "ether"), round-1, userZ, 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositIncentive with a round in the past");
+    console.log(" depositIncentive failed as expected");
+    console.log("test depositIncentive with a rounds in acceptable range")
+    for(var i=0; i<maxRounds; i++){
+      console.log(" depositIncentive round: " +(round+i));
+      await votium.depositIncentive(CVXaddress, web3.utils.toWei("10000", "ether"), round+i, userZ, 0, {from:cvxHolder});
+      depositMinusFee += 10000 - (10000 * fee / 10000);
+      var balance = await CVX.balanceOf(votium.address);
+      console.log("   balance: " +balance);
+      assert(balance == web3.utils.toWei(depositMinusFee.toString(), "ether"), "balance should be 10k minus fee x maxRounds");
+      var virtualBalance = await votium.virtualBalance(CVXaddress);
+      console.log("   virtualBalance: " +virtualBalance);
+      assert(virtualBalance == web3.utils.toWei(depositMinusFee.toString(), "ether"), "virtualBalance should be 10k minus fee x maxRounds");
+  
+      var gaugesLength = await votium.gaugesLength(round+i);
+      console.log("   gaugesLength: " +gaugesLength);
+      assert(gaugesLength == 1, "round "+(round+i)+" gaugesLength should be 1");
+  
+      var gauge = await votium.roundGauges(round+i, 0);
+      console.log("   gauge: " +gauge);
+      assert(gauge == userZ, "round "+(round+i)+" gauge 0 should be userZ");
+  
+      var incentivesLength = await votium.incentivesLength(round+i, gauge);
+      console.log("   incentivesLength: " +incentivesLength);
+      assert(incentivesLength == 1, "round "+(round+i)+" incentivesLength should be 1");
+  
+      var incentive = await votium.incentives(round+i, gauge, 0);
+      console.log("   incentive: ");
+      console.log("     token: "+incentive.token);
+      console.log("     amount: "+incentive.amount.toString());
+      console.log("     maxPerVote: "+incentive.maxPerVote.toString());
+      console.log("     distributed: "+incentive.distributed.toString());
+      console.log("     recycled: "+incentive.recycled.toString());
+      console.log("     depositor: "+incentive.depositor);
     }
-    var balance = await CVX.balanceOf(votium.address);
-    console.log("balance: " +balance);
-    var fee = await votium.platformFee();
-    depositMinusFee = 10000 - (10000 * fee / 10000);
-    assert(balance == web3.utils.toWei(depositMinusFee.toString(), "ether"), "balance should be 10k minus fee");
-    var virtualBalance = await votium.virtualBalance(CVXaddress);
-    console.log("virtualBalance: " +virtualBalance);
-    assert(virtualBalance == web3.utils.toWei(depositMinusFee.toString(), "ether"), "virtualBalance should be 10k minus fee");
 
-    var gaugesLength = await votium.gaugesLength(round);
-    console.log("gaugesLength: " +gaugesLength);
-    assert(gaugesLength == 1, "gaugesLength should be 1");
 
-    var gauge = await votium.roundGauges(round, 0);
-    console.log("gauge: " +gauge);
-    assert(gauge == userZ, "gauge should be userZ");
-
-    var incentivesLength = await votium.incentivesLength(round, gauge);
-    console.log("incentivesLength: " +incentivesLength);
-    assert(incentivesLength == 1, "incentivesLength should be 1");
-
-    var incentive = await votium.incentives(round, gauge, 0);
-    console.log("incentive: ");
-    console.log(" token: "+incentive.token);
-    console.log(" amount: "+web3.utils.fromWei(incentive.amount, "ether"));
-    console.log(" maxPerVote: "+web3.utils.fromWei(incentive.maxPerVote, "ether"));
-    console.log(" distributed: "+web3.utils.fromWei(incentive.distributed, "ether"));
-    console.log(" recycled: "+web3.utils.fromWei(incentive.recycled, "ether"));
-    console.log(" depositor: "+incentive.depositor);
-
+    console.log("\n\n >>> test depositSplitRounds >>>");
+    console.log("test depositSplitRounds with "+(maxRounds+1)+" rounds")
+    fail = await tryCatch(votium.depositSplitRounds(CVXaddress, web3.utils.toWei("10000", "ether"), maxRounds+1, userZ, 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositSplitRounds with "+(maxRounds+1)+" rounds");
+    console.log(" depositSplitRounds failed as expected");
+    console.log("test depositSplitRounds with 0 rounds");
+    fail = await tryCatch(votium.depositSplitRounds(CVXaddress, web3.utils.toWei("10000", "ether"), 0, userZ, 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositSplitRounds with 0 rounds");
+    console.log(" depositSplitRounds failed as expected");
+    console.log("test depositSplitRounds with 1 round");
+    fail = await tryCatch(votium.depositSplitRounds(CVXaddress, web3.utils.toWei("10000", "ether"), 1, userZ, 0, {from:cvxHolder}));
+    assert(fail, "should fail to depositSplitRounds with 1 round");
+    console.log(" depositSplitRounds failed as expected");
+    console.log("test depositSplitRounds with rounds in acceptable range");
+    for(var i=2; i<=maxRounds; i++) {
+      await votium.depositSplitRounds(CVXaddress, web3.utils.toWei("10000", "ether"), i, userZ, 0, {from:cvxHolder});
+      var balance = await CVX.balanceOf(votium.address);
+      console.log(" balance: " +balance);
+      depositMinusFee += 10000 - (10000 * fee / 10000);
+      assert(balance == web3.utils.toWei(depositMinusFee.toString(), "ether"), "balance not correct");
+      var virtualBalance = await votium.virtualBalance(CVXaddress);
+      console.log(" virtualBalance: " +virtualBalance);
+      assert(virtualBalance == web3.utils.toWei(depositMinusFee.toString(), "ether"), "virtualBalance not correct");
+    }
     return;
   });
 
