@@ -102,7 +102,7 @@ contract Votium is Ownable {
     ) public {
         require(_round >= activeRound(), "!roundEnded");
         require(_round <= activeRound() + 6, "!farFuture");
-        uint256 rewardTotal = _takeDeposit(_token, _amount);
+        uint256 rewardTotal = _takeDeposit(_token, _amount, 1);
         Incentive memory incentive = Incentive({
             token: _token,
             amount: rewardTotal,
@@ -136,7 +136,8 @@ contract Votium is Ownable {
     ) public {
         require(_numRounds < 8, "!farFuture");
         require(_numRounds > 1, "!numRounds");
-        uint256 rewardTotal = _takeDeposit(_token, _amount);
+        uint256 rewardTotal = _takeDeposit(_token, _amount, _numRounds);
+        require(rewardTotal / _numRounds > 0, "!rewardTotal");
         uint256 round = activeRound();
         for (uint256 i = 0; i < _numRounds; i++) {
             Incentive memory incentive = Incentive({
@@ -173,7 +174,9 @@ contract Votium is Ownable {
     ) public {
         require(_round >= activeRound(), "!roundEnded");
         require(_round <= activeRound() + 6, "!farFuture");
-        uint256 rewardTotal = _takeDeposit(_token, _amount);
+        require(_gauges.length > 1, "!gauges");
+        uint256 rewardTotal = _takeDeposit(_token, _amount, _gauges.length);
+        require(rewardTotal / _gauges.length > 0, "!rewardTotal");
         for (uint256 i = 0; i < _gauges.length; i++) {
             Incentive memory incentive = Incentive({
                 token: _token,
@@ -209,7 +212,8 @@ contract Votium is Ownable {
     ) public {
         require(_numRounds < 8, "!farFuture");
         require(_numRounds > 1, "!numRounds");
-        uint256 rewardTotal = _takeDeposit(_token, _amount);
+        uint256 rewardTotal = _takeDeposit(_token, _amount, _numRounds * _gauges.length);
+        require(rewardTotal / (_numRounds * _gauges.length) > 0, "!rewardTotal");
         uint256 round = activeRound();
         for (uint256 i = 0; i < _numRounds; i++) {
             for (uint256 j = 0; j < _gauges.length; j++) {
@@ -251,9 +255,10 @@ contract Votium is Ownable {
         require(_round <= activeRound() + 6, "!farFuture");
         uint256 totalDeposit = 0;
         for (uint256 i = 0; i < _gauges.length; i++) {
+            require(_amounts[i] > 0, "!amount");
             totalDeposit += _amounts[i];
         }
-        _takeDeposit(_token, totalDeposit);
+        _takeDeposit(_token, totalDeposit, _gauges.length);
         for (uint256 i = 0; i < _gauges.length; i++) {
             Incentive memory incentive = Incentive({
                 token: _token,
@@ -403,17 +408,18 @@ contract Votium is Ownable {
     // take deposit and send fees to feeAddress, return rewardTotal
     function _takeDeposit(
         address _token,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _split
     ) internal returns (uint256) {
         if (requireAllowlist == true) {
             require(tokenAllowed[_token] == true, "!allowlist");
         }
-        require(_amount > 0, "!zero");
+        require(_amount / _split > 0, "!zero");
         uint256 fee = (_amount * platformFee) / DENOMINATOR;
         uint256 rewardTotal = _amount - fee;
         IERC20(_token).safeTransferFrom(msg.sender, feeAddress, fee);
         IERC20(_token).safeTransferFrom(msg.sender, address(this), rewardTotal);
-        virtualBalance[_token] += rewardTotal;
+        virtualBalance[_token] += (rewardTotal / _split) * _split; // prevent rounding errors
         return rewardTotal;
     }
 
