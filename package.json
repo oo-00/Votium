@@ -4,6 +4,7 @@
     "@truffle/hdwallet-provider": "^2.1.12",
     "chai": "^4.3.7",
     "jsonfile": "^6.1.0",
-    "openzeppelin-test-helpers": "^0.5.1"
+    "openzeppelin-test-helpers": "^0.5.1",
+    "truffle": "^5.10.1"
   }
 }
