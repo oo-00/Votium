@@ -4,7 +4,7 @@ var jsonfile = require('jsonfile');
 const { assert } = require('chai');
 const { web3 } = require('openzeppelin-test-helpers/src/setup');
 
-const verbose = true;
+const verbose = false;
 
 const Votium = artifacts.require("Votium");
 
