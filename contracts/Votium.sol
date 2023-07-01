@@ -212,6 +212,7 @@ contract Votium is Ownable {
     ) public {
         require(_numRounds < 8, "!farFuture");
         require(_numRounds > 1, "!numRounds");
+        require(_gauges.length > 1, "!gauges");
         uint256 rewardTotal = _takeDeposit(_token, _amount, _numRounds * _gauges.length);
         require(rewardTotal / (_numRounds * _gauges.length) > 0, "!rewardTotal");
         uint256 round = activeRound();
