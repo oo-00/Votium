@@ -62,6 +62,7 @@ contract Votium is Ownable {
         approvedTeam[_approved2] = true;
         feeAddress = _feeAddress;
         distributor = _distributor;
+        lastRoundProcessed = (block.timestamp / epochDuration) - 1348;
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
@@ -259,7 +260,7 @@ contract Votium is Ownable {
             require(_amounts[i] > 0, "!amount");
             totalDeposit += _amounts[i];
         }
-        _takeDeposit(_token, totalDeposit, _gauges.length);
+        _takeDeposit(_token, totalDeposit, 1);
         for (uint256 i = 0; i < _gauges.length; i++) {
             Incentive memory incentive = Incentive({
                 token: _token,
@@ -447,7 +448,7 @@ contract Votium is Ownable {
                 uint256 reward;
                 if (incentive.maxPerVote > 0) {
                     reward = incentive.maxPerVote * _totals[i];
-                    if (reward >= incentive.amount) {
+                    if (reward > incentive.amount) {
                         reward = incentive.amount;
                     } else {
                         // recycle unused reward
@@ -465,6 +466,7 @@ contract Votium is Ownable {
                     incentives[_round][_gauges[i]][n].distributed = reward;
                 } else {
                     reward = incentive.amount;
+                    incentives[_round][_gauges[i]][n].distributed = reward;
                 }
                 toTransfer[incentive.token] += reward;
                 toTransferList.push(incentive.token);
