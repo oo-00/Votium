@@ -119,7 +119,7 @@ const advanceTime = async (secondsElaspse) => {
 }
 const day = 86400;
 
-async function tryCatch(promise, expected) {
+async function tryCatch(promise) {
   try {
     await promise;
     return false;
@@ -153,6 +153,8 @@ var userX = "0xAdE9e51C9E23d64E538A7A38656B78aB6Bcc349e";
 var userY = "0xC8076F60cbDd2EE93D54FCc0ced88095A72f4a2f";
 var userZ = "0xAAc0aa431c237C2C0B5f041c8e59B3f1a43aC78F";
 var cvxHolder = "0x15A5F10cC2611bB18b18322E34eB473235EFCa39";
+var usdcHolder = "0x28C6c06298d514Db089934071355E5743bf21d60";
+var spellHolder = "0x46f80018211D5cBBc988e853A8683501FCA4ee9b";
 var weth = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 var userNames = {};
 userNames[userA] = "A";
@@ -185,8 +187,13 @@ var _feeAddress;
 var _distributor;
 
 var CVXaddress = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b";
+var USDCaddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+var SPELLaddress = "0x090185f2135308BaD17527004364eBcC2D37e5F6";
+var USDC;
 var CVX;
+var SPELL;
 var tokenAllowed;
+var symbols = {"0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b":"CVX", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48":"USDC", "0x090185f2135308BaD17527004364eBcC2D37e5F6":"SPELL"};
 
 var depositMinusFee = 0;
 var vdepositMinusFee = new BN(0);
@@ -195,8 +202,24 @@ var gaugeArr;
 var tokenBal = {};
 var tokenVBal = {};
 
-async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
+async function testDepositSchema(schema, token, amount, round_s, gauge_s, max, amount_s = null) {
   var effectedRounds = [];
+  if(amount_s != null && schema == "depositUnevenSplitGauges") {
+    amount = new BN(0);
+    for(var i=0; i<amount_s.length; i++) {
+      amount = amount.add(amount_s[i]);
+    }
+  }
+  if(tokenBal[token] == undefined) { tokenBal[token] = new BN(0); }
+  if(tokenVBal[token] == undefined) { tokenVBal[token] = new BN(0); }
+  amountMinusFee = amount.sub(amount.mul(new BN(fee)).div(new BN(10000)));
+  if(schema == "depositIncentive") {
+    amountMinusFee1 = amount.mul(new BN(round_s.length)).sub(amount.mul(new BN(round_s.length)).mul(new BN(fee)).div(new BN(10000)));
+    tokenBal[token] = tokenBal[token].add(amountMinusFee1);
+  } else {
+    tokenBal[token] = tokenBal[token].add(amountMinusFee);
+  }
+  incentiveAmount = []
   switch(schema) {
     case "depositIncentive": // depositIncentive
       assert(gauge_s.length == 1, "gauge_s must be length 1 for depositIncentive");
@@ -208,8 +231,8 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
         uint256 _maxPerVote
       */
       verboseLog("test depositIncentive with rounds in acceptable range, maxPerVote: " +max);
-      amountMinusFee = amount.sub(amount.mul(new BN(fee)).div(new BN(10000)));
-      incentiveAmount = amountMinusFee; // no division for this schema
+      
+      incentiveAmount[0] = amountMinusFee; // no division for this schema
       for(k in round_s) {
         verboseLog(" depositIncentive round: " +(round_s[k]));
         await votium.depositIncentive(token, amount.toString(), round_s[k], gauge_s[0], max, {from:cvxHolder});
@@ -222,9 +245,6 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
           inRoundGauges[round_s[k]][gauge_s[0]] = 1;
           expectedGaugesLength[round_s[k]]++;
         }
-        if(tokenBal[token] == undefined) { tokenBal[token] = new BN(0); }
-        if(tokenVBal[token] == undefined) { tokenVBal[token] = new BN(0); }
-        tokenBal[token] = tokenBal[token].add(amountMinusFee);
         tokenVBal[token] = tokenVBal[token].add(amountMinusFee); // no division for this schema
         effectedRounds.push(round_s[k]);
       }
@@ -242,12 +262,8 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
       */
       verboseLog("test depositSplitRounds with "+round_s[0]+" rounds, maxPerVote: " +max);
       await votium.depositSplitRounds(token, amount.toString(), round_s[0], gauge_s[0], max, {from:cvxHolder});
-      if(tokenBal[token] == undefined) { tokenBal[token] = new BN(0); }
-      if(tokenVBal[token] == undefined) { tokenVBal[token] = new BN(0); }
-      amountMinusFee = amount.sub(amount.mul(new BN(fee)).div(new BN(10000)));
-      incentiveAmount = amountMinusFee.div(new BN(round_s[0])); 
-      tokenBal[token] = tokenBal[token].add(amountMinusFee);
-      tokenVBal[token] = tokenVBal[token].add(incentiveAmount.mul(new BN(round_s[0]))); 
+      incentiveAmount[0] = amountMinusFee.div(new BN(round_s[0])); 
+      tokenVBal[token] = tokenVBal[token].add(incentiveAmount[0].mul(new BN(round_s[0]))); 
       for(i=round;i<round_s[0]+round;i++) {
         if(expectedIncentivesLength[gauge_s[0]] == undefined) { expectedIncentivesLength[gauge_s[0]] = {}; }
         if(expectedIncentivesLength[gauge_s[0]][i] == undefined) { expectedIncentivesLength[gauge_s[0]][i] = 0; }
@@ -273,12 +289,8 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
       */
       verboseLog("test depositSplitGauges in round "+round_s[0]+" with "+gauge_s.length+" gauges, maxPerVote: " +max);
       await votium.depositSplitGauges(token, amount.toString(), round_s[0], gauge_s, max, {from:cvxHolder});
-      if(tokenBal[token] == undefined) { tokenBal[token] = new BN(0); }
-      if(tokenVBal[token] == undefined) { tokenVBal[token] = new BN(0); }
-      amountMinusFee = amount.sub(amount.mul(new BN(fee)).div(new BN(10000)));
-      incentiveAmount = amountMinusFee.div(new BN(gauge_s.length)); 
-      tokenBal[token] = tokenBal[token].add(amountMinusFee);
-      tokenVBal[token] = tokenVBal[token].add(incentiveAmount.mul(new BN(gauge_s.length))); 
+      incentiveAmount[0] = amountMinusFee.div(new BN(gauge_s.length)); 
+      tokenVBal[token] = tokenVBal[token].add(incentiveAmount[0].mul(new BN(gauge_s.length))); 
       effectedRounds.push(round_s[0]);
       for(i=0;i<gauge_s.length;i++) {
         if(expectedIncentivesLength[gauge_s[i]] == undefined) { expectedIncentivesLength[gauge_s[i]] = {}; }
@@ -304,12 +316,8 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
       */
       verboseLog("test depositSplitGaugesRounds for "+round_s[0]+" rounds with "+gauge_s.length+" gauges, maxPerVote: " +max);
       await votium.depositSplitGaugesRounds(token, amount.toString(), round_s[0], gauge_s, max, {from:cvxHolder});
-      if(tokenBal[token] == undefined) { tokenBal[token] = new BN(0); }
-      if(tokenVBal[token] == undefined) { tokenVBal[token] = new BN(0); }
-      amountMinusFee = amount.sub(amount.mul(new BN(fee)).div(new BN(10000)));
-      incentiveAmount = amountMinusFee.div(new BN(gauge_s.length)).div(new BN(round_s[0])); 
-      tokenBal[token] = tokenBal[token].add(amountMinusFee);
-      tokenVBal[token] = tokenVBal[token].add(incentiveAmount.mul(new BN(gauge_s.length)).mul(new BN(round_s[0]))); 
+      incentiveAmount[0] = amountMinusFee.div(new BN(gauge_s.length)).div(new BN(round_s[0])); 
+      tokenVBal[token] = tokenVBal[token].add(incentiveAmount[0].mul(new BN(gauge_s.length)).mul(new BN(round_s[0]))); 
       for(n=round;n<round_s[0]+round;n++) {
         effectedRounds.push(n);
         for(i=0;i<gauge_s.length;i++) {
@@ -326,6 +334,9 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
       }
       break;
     case "depositUnevenSplitGauges": // depositUnevenSplitGauges
+      assert(round_s.length == 1, "round_s must be length 1 for depositUnevenSplitGauges");
+      assert(gauge_s.length == amount_s.length, "gauge_s and amount_s must be same length for depositUnevenSplitGauges");
+      assert(gauge_s.length > 1, "gauge_s must be length >1 for depositUnevenSplitGauges");
       /*
         address _token,
         uint256 _round,
@@ -333,6 +344,24 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
         uint256[] calldata _amounts,
         uint256 _maxPerVote
       */
+      verboseLog("test depositUnevenSplitGauges for round "+round_s[0]+" with "+gauge_s.length+" gauges, maxPerVote: " +max);
+      await votium.depositUnevenSplitGauges(token, round_s[0], gauge_s, amount_s, max, {from:cvxHolder});
+      tokenVBal[token] = tokenVBal[token].add(amountMinusFee); // no division for this schema
+      effectedRounds.push(round_s[0]);
+      for(i=0;i<gauge_s.length;i++) {
+        incentiveAmount[i] = amount_s[i].sub(amount_s[i].mul(new BN(fee)).div(new BN(10000)));
+        if(expectedIncentivesLength[gauge_s[i]] == undefined) { expectedIncentivesLength[gauge_s[i]] = {}; }
+        if(expectedIncentivesLength[gauge_s[i]][round_s[0]] == undefined) { expectedIncentivesLength[gauge_s[i]][round_s[0]] = 0; }
+        expectedIncentivesLength[gauge_s[i]][round_s[0]]++;
+        if(expectedGaugesLength[round_s[0]] == undefined) { expectedGaugesLength[round_s[0]] = 0; }
+        if(inRoundGauges[round_s[0]] == undefined) { inRoundGauges[round_s[0]] = {}; }
+        if(inRoundGauges[round_s[0]][gauge_s[i]] == undefined) {
+          inRoundGauges[round_s[0]][gauge_s[i]] = 1;
+          expectedGaugesLength[round_s[0]]++;
+        }
+      }
+        
+
       break;
     default:
       assert(false, "invalid schema");
@@ -352,6 +381,11 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
     assert(gaugesLength == expectedGaugesLength[effectedRounds[i]], "round "+effectedRounds[i]+" gaugesLength should be "+expectedGaugesLength[effectedRounds[i]]);
 
     for(var n=0; n<gauge_s.length; n++) {
+      if(schema == "depositUnevenSplitGauges") {
+        g = n;
+      } else {
+        g = 0;
+      }
       var gauge = await votium.roundGauges(effectedRounds[i], expectedGaugesLength[effectedRounds[i]]-gauge_s.length+n);
       verboseLog("     gauge: " +gauge);
       assert(gauge == gauge_s[n], "round "+(effectedRounds[i])+" gauge "+(expectedGaugesLength[effectedRounds[i]]-gauge_s.length+n)+" should be "+gauge_s[n]);
@@ -370,11 +404,37 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max) {
       verboseLog("       recycled: "+incentive.recycled.toString());
       verboseLog("       depositor: "+incentive.depositor);
 
-      verboseLog("      amount should be "+incentiveAmount.toString());
-      assert(incentive.amount.toString() == incentiveAmount.toString(), "incentive amount should be "+incentiveAmount.toString());
+      verboseLog("      amount should be "+incentiveAmount[g].toString());
+      assert(incentive.amount.toString() == incentiveAmount[g].toString(), "incentive amount should be "+incentiveAmount[g].toString());
     }
   }
 }
+
+async function allowTests(expected) {
+  verboseLog("test depositIncentive allowlisting")
+  fail = await tryCatch(votium.depositIncentive(USDCaddress, "10000000000", round, userZ, 0, {from:usdcHolder}));
+  assert(fail === expected, "depositIncentive allowlisting "+expected);
+
+  verboseLog("test depositSplitRounds allowlisting")
+  fail = await tryCatch(votium.depositSplitRounds(USDCaddress, "10000000000", 2, userZ, 0, {from:usdcHolder}));
+  assert(fail === expected, "depositSplitRounds allowlisting "+expected);
+
+  verboseLog("test depositSplitGauges allowlisting")
+  fail = await tryCatch(votium.depositSplitGauges(SPELLaddress, web3.utils.toWei("1", "ether")+"23146", round, [userZ,weth], 0, {from:spellHolder}));
+  assert(fail === expected, "depositSplitGauges allowlisting "+expected);
+
+  verboseLog("test depositSplitGaugesRounds allowlisting")
+  fail = await tryCatch(votium.depositSplitGaugesRounds(SPELLaddress, web3.utils.toWei("1", "ether")+"45610", 2, [userZ,weth], 0, {from:spellHolder}));
+  assert(fail === expected, "depositSplitGaugesRounds allowlisting "+expected);
+
+  verboseLog("test depositUnevenSplitGauges allowlisting");
+  fail = await tryCatch(votium.depositUnevenSplitGauges(USDCaddress, round, [userZ,weth], ["20000054268","30000025743"], 0, {from:usdcHolder}));
+  assert(fail === expected, "depositUnevenSplitGauges allowlisting "+expected);
+
+}
+
+
+    //!!!!!!!!!!!!!!!!!!!!!! DEPLOY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 contract("Deploy System and test", async accounts => {
     it("should deploy system", async () => {
@@ -390,19 +450,22 @@ contract("Deploy System and test", async accounts => {
       userI = accounts[8];
       userJ = accounts[9];
 
-
-      expectedIncentivesLength[userZ] = {};
-      expectedIncentivesLength[userA] = {};
     
       verboseLog("deployer: " +deployer);
       await unlockAccount(deployer);
       await unlockAccount(userX);
       await unlockAccount(cvxHolder);
+      await unlockAccount(usdcHolder);
+      await unlockAccount(spellHolder);
       await unlockAccount(weth);
+      await unlockAccount(multisig);
 
       // send 5 eth from weth to deployer and to cvxHolder to cover gas costs (weth chosen as a gaurantee of having eth on mainnet)
       await web3.eth.sendTransaction({from:weth, to:deployer, value:web3.utils.toWei("5", "ether")});
       await web3.eth.sendTransaction({from:weth, to:cvxHolder, value:web3.utils.toWei("5", "ether")});
+      await web3.eth.sendTransaction({from:weth, to:usdcHolder, value:web3.utils.toWei("5", "ether")});
+      await web3.eth.sendTransaction({from:weth, to:spellHolder, value:web3.utils.toWei("5", "ether")});
+      await web3.eth.sendTransaction({from:weth, to:multisig, value:web3.utils.toWei("5", "ether")});
 
       //constructor(address _approved, address _approved2, address _feeAddress, address _distributor)
       votium = await Votium.new(userY, userX, feeAddress, distributor, {from:deployer});
@@ -449,56 +512,60 @@ contract("Deploy System and test", async accounts => {
 
     //!!!!!!!!!!!!!!!!!!!!!! ALLOW LIST TESTS !!!!!!!!!!!!!!!!!!
 
-    it("cvxHolder approve spending", async () => {
+    it("Token holders approve spending", async () => {
       CVX = await ERC20.at(CVXaddress);
+      USDC = await ERC20.at(USDCaddress);
+      SPELL = await ERC20.at(SPELLaddress);
       // approve CVX spending from cvxHolder to votium
       verboseLog("approve CVX spending from cvxHolder to votium")
       await CVX.approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:cvxHolder});
       var allowance = await CVX.allowance(cvxHolder, votium.address);
       verboseLog(" allowance: " +allowance);
       assert(allowance == web3.utils.toWei("1000000000", "ether"), "allowance should be 1 billion");
+      // approve USDC spending from usdcHolder to votium
+      verboseLog("approve USDC spending from cvxHolder to votium")
+      await USDC.approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:usdcHolder});
+      var allowance = await USDC.allowance(usdcHolder, votium.address);
+      verboseLog(" allowance: " +allowance);
+      assert(allowance == web3.utils.toWei("1000000000", "ether"), "allowance should be 1 billion");
+      // approve SPELL spending from usdcHolder to votium
+      verboseLog("approve SPELL spending from cvxHolder to votium")
+      await SPELL.approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:spellHolder});
+      var allowance = await SPELL.allowance(spellHolder, votium.address);
+      verboseLog(" allowance: " +allowance);
+      assert(allowance == web3.utils.toWei("1000000000", "ether"), "allowance should be 1 billion");
     });
     
     it("should not allow deposits before allowlisting", async () => {
-      // try to depositIncentive before allowlisting
-      verboseLog("test depositIncentive before allowlisting")
-      fail = await tryCatch(votium.depositIncentive(CVXaddress, web3.utils.toWei("10000", "ether"), round, userZ, 0, {from:cvxHolder}));
-      assert(fail, "should fail to depositIncentive before allowlisting");
-      verboseLog(" depositIncentive failed as expected");
-      verboseLog("test depositSplitRounds before allowlisting")
-      fail = await tryCatch(votium.depositSplitRounds(CVXaddress, web3.utils.toWei("10000", "ether"), 2, userZ, 0, {from:cvxHolder}));
-      assert(fail, "should fail to depositSplitRounds before allowlisting");
-      verboseLog(" depositSplitRounds failed as expected");
-      verboseLog("test depositSplitGauges before allowlisting")
-      fail = await tryCatch(votium.depositSplitGauges(CVXaddress, web3.utils.toWei("10000", "ether"), round, [userZ,weth], 0, {from:cvxHolder}));
-      assert(fail, "should fail to depositSplitGauges before allowlisting");
-      verboseLog(" depositSplitGauges failed as expected");
-      verboseLog("test depositSplitGaugesRounds before allowlisting")
-      fail = await tryCatch(votium.depositSplitGaugesRounds(CVXaddress, web3.utils.toWei("10000", "ether"), 2, [userZ,weth], 0, {from:cvxHolder}));
-      assert(fail, "should fail to depositSplitGaugesRounds before allowlisting");
-      verboseLog(" depositSplitGaugesRounds failed as expected");
-      verboseLog("test depositUnevenSplitGauges before allowlisting");
-      fail = await tryCatch(votium.depositUnevenSplitGauges(CVXaddress, round, [userA,userB], [web3.utils.toWei("3000", "ether"),web3.utils.toWei("4000", "ether")], 0, {from:cvxHolder}));
-      assert(fail, "should fail to depositUnevenSplitGauges before allowlisting");
-      verboseLog(" depositUnevenSplitGauges failed as expected");
+      await allowTests(true);
     });
     // try allowToken CVX from not approved address
     it("should not allow `allowToken` from not approved address", async () => {
       verboseLog("test allowToken true from not approved address")
-      fail = await tryCatch(votium.allowToken(CVXaddress, true, {from:userZ}));
+      fail = await tryCatch(votium.allowToken(CVXaddress, true, {from:cvxHolder}));
       assert(fail, "should fail to allowToken from not approved address");
       verboseLog(" allowToken failed as expected")
     });
 
     // allowlist CVX from approved address
-    it("should allow `allowToken` from approved address", async () => {
+    it("should allow `allowToken[s]` from approved address", async () => {
       verboseLog("test allowToken true from approved address")
       await votium.allowToken(CVXaddress, true, {from:userX});
       tokenAllowed = await votium.tokenAllowed(CVXaddress);
       verboseLog(" tokenAllowed: " +tokenAllowed);
       assert(tokenAllowed == true, "CVX should be allowed after allowToken");
+      await votium.allowTokens([USDCaddress, SPELLaddress], true, {from:userX});
+      tokenAllowed = await votium.tokenAllowed(USDCaddress);
+      assert(tokenAllowed == true, "USDC should be allowed after allowTokens");
+      tokenAllowed = await votium.tokenAllowed(SPELLaddress);
+      assert(tokenAllowed == true, "SPELL should be allowed after allowTokens");
     });
 
+    it("should allow deposits after allowlisting", async () => {
+      await allowTests(false);
+    });
+    
+    /*
     //!!!!!!!!!!!!!!!!!!!!!! DEPOSITINCENTIVE TESTS !!!!!!!!!!!!!!!!!!
 
     
@@ -514,11 +581,12 @@ contract("Deploy System and test", async accounts => {
     });
 
     it("should allow depositIncentive with rounds in acceptable range, maxPerVote: 0", async () => {
-      await testDepositSchema("depositIncentive", CVXaddress, new BN(web3.utils.toWei("100", "ether")), [round+0,round+6], [userZ], 0);
+      await testDepositSchema("depositIncentive", CVXaddress, new BN(web3.utils.toWei("100", "ether")), [round+0,round+6], [userA], 0);
     });
     it("should allow depositIncentive with rounds in acceptable range, maxPerVote: .001", async () => {
-      await testDepositSchema("depositIncentive", CVXaddress, new BN(web3.utils.toWei("200", "ether")), [round+0,round+6], [userZ], web3.utils.toWei(".001", "ether"));
+      await testDepositSchema("depositIncentive", CVXaddress, new BN(web3.utils.toWei("200", "ether")), [round+0,round+6], [userA], web3.utils.toWei(".001", "ether"));
     });
+    
     
     //!!!!!!!!!!!!!!!!!!!!!! DEPOSITSPLITROUNDS TESTS !!!!!!!!!!!!!!!!!!
 
@@ -537,16 +605,16 @@ contract("Deploy System and test", async accounts => {
     });
 
     it("should allow depositSplitRounds with rounds in acceptable range, maxPerVote: 0", async () => {
-      await testDepositSchema("depositSplitRounds", CVXaddress, new BN(web3.utils.toWei("1000", "ether")), [2], [userA], 0);
+      await testDepositSchema("depositSplitRounds", CVXaddress, new BN(web3.utils.toWei("1000", "ether")), [2], [userB], 0);
     });
     it("should allow depositSplitRounds with rounds in acceptable range, maxPerVote: .0015", async () => {
-      await testDepositSchema("depositSplitRounds", CVXaddress, new BN(web3.utils.toWei("1000", "ether")), [2], [userA], web3.utils.toWei(".0015", "ether"));
+      await testDepositSchema("depositSplitRounds", CVXaddress, new BN(web3.utils.toWei("1000", "ether")), [2], [userB], web3.utils.toWei(".0015", "ether"));
     });
 
     //!!!!!!!!!!!!!!!!!!!!!! DEPOSITSPLITGAUGES TESTS !!!!!!!!!!!!!!!!!!
 
     it("should not allow depositSplitGauges outside of gauge/round range", async () => {
-      gaugeArr = [userC,userD,userE,userF,userG,userH,userI];
+      gaugeArr = [userB,userC,userD,userE,userF,userG,userH];
 
       fail = await tryCatch(votium.depositSplitGauges(CVXaddress, web3.utils.toWei("100", "ether"), round+maxRounds, gaugeArr, 0, {from:cvxHolder}));
       assert(fail, "should fail to depositSplitGauges with for round "+(round+maxRounds));
@@ -592,7 +660,101 @@ contract("Deploy System and test", async accounts => {
     it("should allow depositSplitRounds with rounds in acceptable range, maxPerVote: .000333333333333333", async () => {
       await testDepositSchema("depositSplitGaugesRounds", CVXaddress, new BN(web3.utils.toWei("500", "ether")), [2], [userA, userB], "333333333333333");
     });
+    
+    it("should not allow depositUnevenSplitGauges outside of gauge/round range", async () => {
+      gaugeArr = [userC,userD,userE,userF,userG,userH,userI];
+      amounts = [
+        new BN(web3.utils.toWei("100", "ether")), 
+        new BN(web3.utils.toWei("200", "ether")),
+        new BN(web3.utils.toWei("300", "ether")),
+        new BN(web3.utils.toWei("400", "ether")),
+        new BN(web3.utils.toWei("500", "ether")),
+        new BN(web3.utils.toWei("600", "ether")),
+        new BN(web3.utils.toWei("700", "ether"))
+      ];
+      
+      fail = await tryCatch(votium.depositUnevenSplitGauges(CVXaddress, round-1, gaugeArr, amounts, 0, {from:cvxHolder}));
+      assert(fail, "should fail to depositUnevenSplitGauges in previous round ");
+      verboseLog(" depositUnevenSplitGauges failed as expected");
+      fail = await tryCatch(votium.depositUnevenSplitGauges(CVXaddress, round+maxRounds, gaugeArr, amounts, 0, {from:cvxHolder}));
+      assert(fail, "should fail to depositUnevenSplitGauges in late round");
+      verboseLog(" depositUnevenSplitGauges failed as expected");
+      verboseLog("test depositUnevenSplitGauges with 0 or 1 gauges");
+      fail = await tryCatch(votium.depositUnevenSplitGauges(CVXaddress, round, [], 0, {from:cvxHolder}));
+      assert(fail, "should fail to depositUnevenSplitGauges with 0 gauges");
+      fail = await tryCatch(votium.depositUnevenSplitGauges(CVXaddress, round, [userA], 0, {from:cvxHolder}));
+      assert(fail, "should fail to depositUnevenSplitGauges with 1 gauge");
+      verboseLog("test depositUnevenSplitGauges with uneven gauges/amounts");
+      fail = await tryCatch(votium.depositUnevenSplitGauges(CVXaddress, round, [userA,userB], [new BN(web3.utils.toWei("100", "ether"))], 0, {from:cvxHolder}));
+      assert(fail, "should fail to depositUnevenSplitGauges with uneven gauges/amounts");
+      verboseLog(" depositUnevenSplitGauges failed as expected");
+    });
 
+    it("should allow depositUnevenSplitGauges with rounds and gauges in acceptable range, maxPerVote: 0", async () => {
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round+maxRounds-1], gaugeArr, 0, amounts);
+    });
+    it("should allow depositUnevenSplitGauges with rounds in acceptable range, maxPerVote: .000333333333333333", async () => {
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, "333333333333333", amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round+maxRounds-1], gaugeArr, "333333333333333", amounts);
+    });
+    */
+    it("should advance time 2 weeks", async () => {
+      await advanceTime(14*day);
+      nround = await votium.activeRound();
+      assert.equal(nround.toNumber(), round+1, "round should have advanced");
+    });
+
+
+    it("Should end round", async () => {
+      lrp = await votium.lastRoundProcessed();
+      cr = await votium.activeRound();
+      console.log("Last round processed: "+lrp.toString());
+      console.log("Current round: "+cr.toString());
+      gLength = await votium.gaugesLength(round);
+      console.log("Round "+round+" gauges: "+gLength);
+      for (var i = 0; i < gLength; i++) {
+        gauge = await votium.roundGauges(round, i);
+        console.log("gauge "+i+" : "+gauge);
+        iLength = await votium.incentivesLength(round, gauge);
+        for (var j = 0; j < iLength; j++) {
+          incentive = await votium.incentives(round, gauge, j);
+          console.log("   incentive: ");
+          console.log("     token: "+symbols[incentive.token]);
+          console.log("     amount: "+incentive.amount.toString());
+          console.log("     maxPerVote: "+incentive.maxPerVote.toString());
+          console.log("     distributed: "+incentive.distributed.toString());
+          console.log("     recycled: "+incentive.recycled.toString());
+          console.log("     depositor: "+incentive.depositor);
+        }
+      }
+      gauges = [userZ, weth];
+      totals = [50000, 50000];
+      await votium.endRound(round, gauges, totals, {from:multisig});
+      votesReceived = await votium.votesReceived(round, gauges[0]);
+      assert.equal(votesReceived.toString(), totals[0].toString(), "votes received should match");
+      votesReceived = await votium.votesReceived(round, gauges[1]);
+      assert.equal(votesReceived.toString(), totals[1].toString(), "votes received should match");
+      console.log(votesReceived.toString());
+      for (var i = 0; i < gLength; i++) {
+        gauge = await votium.roundGauges(round, i);
+        console.log("gauge "+i+" : "+gauge);
+        iLength = await votium.incentivesLength(round, gauge);
+        for (var j = 0; j < iLength; j++) {
+          incentive = await votium.incentives(round, gauge, j);
+          console.log("   incentive: ");
+          console.log("     token: "+symbols[incentive.token]);
+          console.log("     amount: "+incentive.amount.toString());
+          console.log("     maxPerVote: "+incentive.maxPerVote.toString());
+          console.log("     distributed: "+incentive.distributed.toString());
+          console.log("     recycled: "+incentive.recycled.toString());
+          console.log("     depositor: "+incentive.depositor);
+        }
+      }
+    });
+
+
+    
     return;
 });
 
