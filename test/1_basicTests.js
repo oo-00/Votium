@@ -3,12 +3,14 @@ const { BN, time } = require('openzeppelin-test-helpers');
 var jsonfile = require('jsonfile');
 const { assert } = require('chai');
 const { web3 } = require('openzeppelin-test-helpers/src/setup');
+const ethers = require('ethers');
 
-const verbose = false;
+const verbose = true;
 
 const Votium = artifacts.require("Votium");
 
 const ERC20 = artifacts.require("IERC20");
+
 
 const addAccount = async (address) => {
   return new Promise((resolve, reject) => {
@@ -189,9 +191,10 @@ var _distributor;
 var CVXaddress = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b";
 var USDCaddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 var SPELLaddress = "0x090185f2135308BaD17527004364eBcC2D37e5F6";
-var USDC;
-var CVX;
-var SPELL;
+var tokens = {};
+tokens[CVXaddress] = "";
+tokens[USDCaddress] = "";
+tokens[SPELLaddress] = "";
 var tokenAllowed;
 var symbols = {"0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b":"CVX", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48":"USDC", "0x090185f2135308BaD17527004364eBcC2D37e5F6":"SPELL"};
 
@@ -368,7 +371,7 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max, a
       return;
   }
 
-  var balance = await CVX.balanceOf(votium.address);
+  var balance = await tokens[CVXaddress].balanceOf(votium.address);
   verboseLog("   balance: " +balance);
   assert(balance == tokenBal[token].toString(), "balance should be "+tokenBal[token].toString());
   var virtualBalance = await votium.virtualBalance(CVXaddress);
@@ -513,25 +516,25 @@ contract("Deploy System and test", async accounts => {
     //!!!!!!!!!!!!!!!!!!!!!! ALLOW LIST TESTS !!!!!!!!!!!!!!!!!!
 
     it("Token holders approve spending", async () => {
-      CVX = await ERC20.at(CVXaddress);
-      USDC = await ERC20.at(USDCaddress);
-      SPELL = await ERC20.at(SPELLaddress);
+      tokens[CVXaddress] = await ERC20.at(CVXaddress);
+      tokens[USDCaddress] = await ERC20.at(USDCaddress);
+      tokens[SPELLaddress] = await ERC20.at(SPELLaddress);
       // approve CVX spending from cvxHolder to votium
       verboseLog("approve CVX spending from cvxHolder to votium")
-      await CVX.approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:cvxHolder});
-      var allowance = await CVX.allowance(cvxHolder, votium.address);
+      await tokens[CVXaddress].approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:cvxHolder});
+      var allowance = await tokens[CVXaddress].allowance(cvxHolder, votium.address);
       verboseLog(" allowance: " +allowance);
       assert(allowance == web3.utils.toWei("1000000000", "ether"), "allowance should be 1 billion");
       // approve USDC spending from usdcHolder to votium
       verboseLog("approve USDC spending from cvxHolder to votium")
-      await USDC.approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:usdcHolder});
-      var allowance = await USDC.allowance(usdcHolder, votium.address);
+      await tokens[USDCaddress].approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:usdcHolder});
+      var allowance = await tokens[USDCaddress].allowance(usdcHolder, votium.address);
       verboseLog(" allowance: " +allowance);
       assert(allowance == web3.utils.toWei("1000000000", "ether"), "allowance should be 1 billion");
       // approve SPELL spending from usdcHolder to votium
       verboseLog("approve SPELL spending from cvxHolder to votium")
-      await SPELL.approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:spellHolder});
-      var allowance = await SPELL.allowance(spellHolder, votium.address);
+      await tokens[SPELLaddress].approve(votium.address, web3.utils.toWei("1000000000", "ether"), {from:spellHolder});
+      var allowance = await tokens[SPELLaddress].allowance(spellHolder, votium.address);
       verboseLog(" allowance: " +allowance);
       assert(allowance == web3.utils.toWei("1000000000", "ether"), "allowance should be 1 billion");
     });
@@ -563,6 +566,16 @@ contract("Deploy System and test", async accounts => {
 
     it("should allow deposits after allowlisting", async () => {
       await allowTests(false);
+    });
+
+    it("should allow depositor to increase deposit", async () => {
+      verboseLog("test increaseDeposit")
+      await votium.increaseIncentive(round, userZ, "0", "696969", "0", {from:usdcHolder});
+    });
+
+    it("should not allow depositor to decrease maxpervote", async () => {
+      fail = await tryCatch(votium.increaseIncentive(round, userZ, "0", "696969", "1", {from:usdcHolder}));
+      assert(fail, "should fail to decrease maxpervote");
     });
     
     /*
@@ -707,6 +720,7 @@ contract("Deploy System and test", async accounts => {
 
 
     it("Should end round", async () => {
+      toTransfer = {};
       lrp = await votium.lastRoundProcessed();
       cr = await votium.activeRound();
       console.log("Last round processed: "+lrp.toString());
@@ -719,6 +733,7 @@ contract("Deploy System and test", async accounts => {
         iLength = await votium.incentivesLength(round, gauge);
         for (var j = 0; j < iLength; j++) {
           incentive = await votium.incentives(round, gauge, j);
+          if(toTransfer[incentive.token] == undefined) { toTransfer[incentive.token] = new BN(0); }
           console.log("   incentive: ");
           console.log("     token: "+symbols[incentive.token]);
           console.log("     amount: "+incentive.amount.toString());
@@ -726,7 +741,19 @@ contract("Deploy System and test", async accounts => {
           console.log("     distributed: "+incentive.distributed.toString());
           console.log("     recycled: "+incentive.recycled.toString());
           console.log("     depositor: "+incentive.depositor);
+          toTransfer[incentive.token] = toTransfer[incentive.token].add(incentive.amount);
         }
+      }
+      for(t in toTransfer) {
+        console.log("toTransfer: "+toTransfer[t].toString()+" "+symbols[t]);
+        tokenVBal[t] = await votium.virtualBalance(t);
+        console.log("     virtual balance: "+tokenVBal[t].toString());
+        tokenBal[t] = await tokens[t].balanceOf(votium.address);
+        console.log("     balance: "+tokenBal[t].toString());
+        toTransfer[t] = toTransfer[t].mul(tokenBal[t]).div(tokenVBal[t]);
+        console.log("     toTransferAdjusted: "+toTransfer[t].toString());
+        var newBal = tokenBal[t].sub(toTransfer[t]);
+        console.log("     new expected balance: "+newBal.toString());
       }
       gauges = [userZ, weth];
       totals = [50000, 50000];
@@ -735,7 +762,6 @@ contract("Deploy System and test", async accounts => {
       assert.equal(votesReceived.toString(), totals[0].toString(), "votes received should match");
       votesReceived = await votium.votesReceived(round, gauges[1]);
       assert.equal(votesReceived.toString(), totals[1].toString(), "votes received should match");
-      console.log(votesReceived.toString());
       for (var i = 0; i < gLength; i++) {
         gauge = await votium.roundGauges(round, i);
         console.log("gauge "+i+" : "+gauge);
@@ -751,8 +777,94 @@ contract("Deploy System and test", async accounts => {
           console.log("     depositor: "+incentive.depositor);
         }
       }
+      round++;
     });
 
+    it("should advance time 2 weeks", async () => {
+      await advanceTime(14*day);
+      nround = await votium.activeRound();
+      assert.equal(nround.toNumber(), round+1, "round should have advanced");
+    });
+
+    it("Should send SPELL and USDC to userA to simulate negative rebase", async () => {
+      // use execute function 
+      // build erc20 transfer calldata
+      let iface = new ethers.utils.Interface(ERC20._json.abi);
+      calldata = await iface.functions.transfer.encode([userA, "123456789"]);
+      console.log(calldata)
+      var spellBal = await tokens[SPELLaddress].balanceOf(votium.address);
+      console.log("SPELL balance: "+spellBal.toString());
+      await votium.execute(SPELLaddress, "0", calldata, {from:multisig});
+      spellBal = await tokens[SPELLaddress].balanceOf(votium.address);
+      console.log("SPELL balance: "+spellBal.toString());
+      var usdcBal = await tokens[USDCaddress].balanceOf(votium.address);
+      console.log("USDC balance: "+usdcBal.toString());
+      await votium.execute(USDCaddress, "0", calldata, {from:multisig});
+      usdcBal = await tokens[USDCaddress].balanceOf(votium.address);
+      console.log("USDC balance: "+usdcBal.toString());
+    });
+
+
+    it("Should end round", async () => {
+      toTransfer = {};
+      lrp = await votium.lastRoundProcessed();
+      cr = await votium.activeRound();
+      console.log("Last round processed: "+lrp.toString());
+      console.log("Current round: "+cr.toString());
+      gLength = await votium.gaugesLength(round);
+      console.log("Round "+round+" gauges: "+gLength);
+      for (var i = 0; i < gLength; i++) {
+        gauge = await votium.roundGauges(round, i);
+        console.log("gauge "+i+" : "+gauge);
+        iLength = await votium.incentivesLength(round, gauge);
+        for (var j = 0; j < iLength; j++) {
+          incentive = await votium.incentives(round, gauge, j);
+          if(toTransfer[incentive.token] == undefined) { toTransfer[incentive.token] = new BN(0); }
+          console.log("   incentive: ");
+          console.log("     token: "+symbols[incentive.token]);
+          console.log("     amount: "+incentive.amount.toString());
+          console.log("     maxPerVote: "+incentive.maxPerVote.toString());
+          console.log("     distributed: "+incentive.distributed.toString());
+          console.log("     recycled: "+incentive.recycled.toString());
+          console.log("     depositor: "+incentive.depositor);
+          toTransfer[incentive.token] = toTransfer[incentive.token].add(incentive.amount);
+        }
+      }
+      for(t in toTransfer) {
+        console.log("toTransfer: "+toTransfer[t].toString()+" "+symbols[t]);
+        tokenVBal[t] = await votium.virtualBalance(t);
+        console.log("     virtual balance: "+tokenVBal[t].toString());
+        tokenBal[t] = await tokens[t].balanceOf(votium.address);
+        console.log("     balance: "+tokenBal[t].toString());
+        toTransfer[t] = toTransfer[t].mul(tokenBal[t]).div(tokenVBal[t]);
+        console.log("     toTransferAdjusted: "+toTransfer[t].toString());
+        var newBal = tokenBal[t].sub(toTransfer[t]);
+        console.log("     new expected balance: "+newBal.toString());
+      }
+      gauges = [userZ, weth];
+      totals = [50000, 50000];
+      await votium.endRound(round, gauges, totals, {from:multisig});
+      votesReceived = await votium.votesReceived(round, gauges[0]);
+      assert.equal(votesReceived.toString(), totals[0].toString(), "votes received should match");
+      votesReceived = await votium.votesReceived(round, gauges[1]);
+      assert.equal(votesReceived.toString(), totals[1].toString(), "votes received should match");
+      for (var i = 0; i < gLength; i++) {
+        gauge = await votium.roundGauges(round, i);
+        console.log("gauge "+i+" : "+gauge);
+        iLength = await votium.incentivesLength(round, gauge);
+        for (var j = 0; j < iLength; j++) {
+          incentive = await votium.incentives(round, gauge, j);
+          console.log("   incentive: ");
+          console.log("     token: "+symbols[incentive.token]);
+          console.log("     amount: "+incentive.amount.toString());
+          console.log("     maxPerVote: "+incentive.maxPerVote.toString());
+          console.log("     distributed: "+incentive.distributed.toString());
+          console.log("     recycled: "+incentive.recycled.toString());
+          console.log("     depositor: "+incentive.depositor);
+        }
+      }
+      round++;
+    });
 
     
     return;
