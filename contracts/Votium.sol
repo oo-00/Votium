@@ -287,6 +287,45 @@ contract Votium is Ownable {
         }
     }
 
+    function increaseIncentive(
+        uint256 _round,
+        address _gauge,
+        uint256 _incentive,
+        uint256 _increase,
+        uint256 _maxPerVote
+    ) public {
+        require(_maxPerVote != incentives[_round][_gauge][_incentive].maxPerVote || _increase > 0, "!change");
+        require(_round >= activeRound(), "!deadline");
+        require(
+            incentives[_round][_gauge][_incentive].depositor == msg.sender,
+            "!depositor"
+        );
+        if(_maxPerVote > 0) {
+            require(_maxPerVote >= incentives[_round][_gauge][_incentive].maxPerVote, "!increaseOnly");
+            require(incentives[_round][_gauge][_incentive].maxPerVote != 0, "!increaseOnly");
+        }
+        if(_maxPerVote != incentives[_round][_gauge][_incentive].maxPerVote) {
+            incentives[_round][_gauge][_incentive].maxPerVote = _maxPerVote;
+        }
+        uint256 reward = 0;
+        if(_increase > 0) {
+            reward = _takeDeposit(
+                incentives[_round][_gauge][_incentive].token,
+                _increase,
+                1
+            );
+            incentives[_round][_gauge][_incentive].amount += reward;
+        }
+        emit IncreasedIncentive(
+            incentives[_round][_gauge][_incentive].token,
+            incentives[_round][_gauge][_incentive].amount,
+            reward,
+            _round,
+            _gauge,
+            _maxPerVote
+        );
+    }
+
     // function for depositor to withdraw unprocessed incentives
     // this should only happen if a gauge does not exist or is killed before the round ends
     // fees are not returned
@@ -313,13 +352,11 @@ contract Votium is Ownable {
         );
         uint256 amount = incentives[_round][_gauge][_incentive].amount;
         incentives[_round][_gauge][_incentive].amount = 0;
+        uint256 adjustedAmount = amount * IERC20(incentives[_round][_gauge][_incentive].token).balanceOf(address(this)) / virtualBalance[incentives[_round][_gauge][_incentive].token];
+        amount = amount > adjustedAmount ? adjustedAmount : amount; // use lower amount to avoid over-withdrawal for negative rebase tokens
         IERC20(incentives[_round][_gauge][_incentive].token).safeTransfer(
             msg.sender,
-            (amount *
-                IERC20(incentives[_round][_gauge][_incentive].token).balanceOf(
-                    address(this)
-                )) /
-                virtualBalance[incentives[_round][_gauge][_incentive].token]
+            amount
         );
         virtualBalance[incentives[_round][_gauge][_incentive].token] -= amount;
         emit WithdrawUnprocessed(_round, _gauge, _incentive, amount);
@@ -474,11 +511,12 @@ contract Votium is Ownable {
         }
         lastRoundProcessed = _round;
         for (uint256 i = 0; i < toTransferList.length; i++) {
+            if(toTransfer[toTransferList[i]] == 0) continue; // skip if already transferred
             IERC20(toTransferList[i]).safeTransfer(
                 distributor,
                 (toTransfer[toTransferList[i]] *
                     IERC20(toTransferList[i]).balanceOf(address(this))) /
-                    virtualBalance[toTransferList[i]]
+                    virtualBalance[toTransferList[i]]   // account for rebasing tokens
             );
             virtualBalance[toTransferList[i]] -= toTransfer[toTransferList[i]];
             toTransfer[toTransferList[i]] = 0;
@@ -553,5 +591,13 @@ contract Votium is Ownable {
         address _gauge,
         uint256 _incentive,
         uint256 _amount
+    );
+    event IncreasedIncentive(
+        address _token,
+        uint256 _total,
+        uint256 _increase,
+        uint256 _round,
+        address _gauge,
+        uint256 _maxPerVote
     );
 }
