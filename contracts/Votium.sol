@@ -203,7 +203,7 @@ contract Votium is Ownable, ReentrancyGuard {
         address _token,
         uint256 _amount,
         uint256 _round,
-        address[] calldata _gauges,
+        address[] memory _gauges,
         uint256 _maxPerVote,
         address[] memory _excluded
     ) public {
@@ -249,7 +249,7 @@ contract Votium is Ownable, ReentrancyGuard {
         address _token,
         uint256 _amount,
         uint256 _numRounds,
-        address[] calldata _gauges,
+        address[] memory _gauges,
         uint256 _maxPerVote,
         address[] memory _excluded
     ) public {
@@ -297,8 +297,8 @@ contract Votium is Ownable, ReentrancyGuard {
     function depositUnevenSplitGauges(
         address _token,
         uint256 _round,
-        address[] calldata _gauges,
-        uint256[] calldata _amounts,
+        address[] memory _gauges,
+        uint256[] memory _amounts,
         uint256 _maxPerVote,
         address[] memory _excluded
     ) public {
@@ -346,8 +346,8 @@ contract Votium is Ownable, ReentrancyGuard {
     function depositUnevenSplitGaugesRounds(
         address _token,
         uint256 _numRounds,
-        address[] calldata _gauges,
-        uint256[] calldata _amounts,
+        address[] memory _gauges,
+        uint256[] memory _amounts,
         uint256 _maxPerVote,
         address[] memory _excluded
     ) public {
@@ -374,19 +374,18 @@ contract Votium is Ownable, ReentrancyGuard {
             uint256 rewardTotal = _amounts[i] - (_amounts[i] * platformFee) / DENOMINATOR;
             incentive.amount = rewardTotal;
             rewardsTotal += rewardTotal * _numRounds;
-            address gauge = _gauges[i]; // stack depth
             for (uint256 j = 0; j < _numRounds; j++) {
-                incentives[round + j][gauge].push(incentive);
-                userDeposits[msg.sender][round + j][gauge].push(
-                    incentives[round + j][gauge].length - 1
+                incentives[round + j][_gauges[i]].push(incentive);
+                userDeposits[msg.sender][round + j][_gauges[i]].push(
+                    incentives[round + j][_gauges[i]].length - 1
                 );
                 _maintainUserRounds(round + j);
-                _maintainGaugeArrays(round + j, gauge);
+                _maintainGaugeArrays(round + j, _gauges[i]);
                 emit NewIncentive(
                     incentive.token,
                     rewardTotal,
                     round + j,
-                    gauge,
+                    _gauges[i],
                     _maxPerVote,
                     false
                 );
@@ -516,15 +515,12 @@ contract Votium is Ownable, ReentrancyGuard {
             "!recycled"
         );
         Incentive memory original = incentives[_round][_gauge][_incentive];
+        uint256 currentRound = activeRound();
+        incentives[currentRound][_gauge].push(original);
         incentives[_round][_gauge][_incentive].recycled = original.amount;
-        _recycleReward(
-            original.token,
-            original.amount,
-            _gauge,
-            original.maxPerVote,
-            original.depositor,
-            original.excluded
-        );
+        emit NewIncentive(original.token, original.amount, currentRound, _gauge, original.maxPerVote, true);
+
+
     }
 
     /* ========== APPROVED TEAM FUNCTIONS ========== */
@@ -556,29 +552,6 @@ contract Votium is Ownable, ReentrancyGuard {
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
-
-    // rewards are recycled automatically if processed without consuming entire reward (maxPerVote)
-    function _recycleReward(
-        address _token,
-        uint256 _amount,
-        address _gauge,
-        uint256 _maxPerVote,
-        address _depositor,
-        address[] memory _excluded
-    ) internal {
-        uint256 _round = activeRound();
-        Incentive memory incentive = Incentive({
-            token: _token,
-            amount: _amount,
-            maxPerVote: _maxPerVote,
-            distributed: 0,
-            recycled: 0,
-            depositor: _depositor,
-            excluded: _excluded
-        });
-        incentives[_round][_gauge].push(incentive);
-        emit NewIncentive(_token, _amount, _round, _gauge, _maxPerVote, true);
-    }
 
     // take deposit and send fees to feeAddress, return rewardTotal
     function _takeDeposit(address _token, uint256 _amount) internal {
@@ -627,25 +600,18 @@ contract Votium is Ownable, ReentrancyGuard {
                 n < incentives[_round][_gauges[i]].length;
                 n++
             ) {
-                Incentive storage incentive = incentives[_round][_gauges[i]][n];
+                Incentive memory incentive = incentives[_round][_gauges[i]][n];
                 uint256 reward;
                 if (incentive.maxPerVote > 0) {
                     reward = incentive.maxPerVote * _totals[i];
-                    if (reward > incentive.amount) {
+                    if (reward >= incentive.amount) {
                         reward = incentive.amount;
                     } else {
                         // recycle unused reward
-                        _recycleReward(
-                            incentive.token,
-                            incentive.amount - reward,
-                            _gauges[i],
-                            incentive.maxPerVote,
-                            incentive.depositor,
-                            incentive.excluded
-                        );
-                        incentives[_round][_gauges[i]][n].recycled =
-                            incentive.amount -
-                            reward;
+                        incentive.amount -= reward;
+                        incentives[_round+1][_gauges[i]].push(incentive);
+                        incentives[_round][_gauges[i]][n].recycled = incentive.amount - reward;
+                        emit NewIncentive(incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, true);
                     }
                     incentives[_round][_gauges[i]][n].distributed = reward;
                 } else {
