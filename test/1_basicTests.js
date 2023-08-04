@@ -627,7 +627,7 @@ contract("Deploy System and test", async accounts => {
       assert(tokenAllowed == true, "SPELL should be allowed after allowTokens");
     });
 
-    /*
+    
     it("should allow deposits after allowlisting", async () => {
       await allowTests(false);
     });
@@ -777,7 +777,7 @@ contract("Deploy System and test", async accounts => {
       await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round+maxRounds-1], gaugeArr, "333333333333333", amounts);
     });
     
-    
+    */
     it("should advance time 2 weeks", async () => {
       await advanceTime(14*day);
       nround = await votium.activeRound();
@@ -983,7 +983,7 @@ contract("Deploy System and test", async accounts => {
       verboseLog("     excluded: "+incentive.excluded);
 
     });
-*/
+
     it("Should not allow deposit with exclusions", async () => {
       fail = await tryCatch(votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 0, [userX], {from:usdcHolder}));
       assert(fail, "Should not allow deposit with exclusions");
@@ -1019,7 +1019,6 @@ contract("Deploy System and test", async accounts => {
       verboseLog("     recycled: "+incentive.recycled.toString());
       verboseLog("     depositor: "+incentive.depositor);
       verboseLog("     excluded: "+incentive.excluded);
-      console.log(incentive);
     });
 
 
