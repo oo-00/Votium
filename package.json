@@ -5,6 +5,7 @@
     "chai": "^4.3.7",
     "jsonfile": "^6.1.0",
     "openzeppelin-test-helpers": "^0.5.1",
-    "truffle": "^5.10.1"
+    "truffle": "^5.10.1",
+    "truffle-plugin-verify": "^0.6.4"
   }
 }
