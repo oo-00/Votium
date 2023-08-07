@@ -418,6 +418,10 @@ async function allowTests(expected) {
   fail = await tryCatch(votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 0, [], {from:usdcHolder}));
   assert(fail === expected, "depositIncentive allowlisting "+expected);
 
+  verboseLog("test depositIncentiveSimple allowlisting")
+  fail = await tryCatch(votium.depositIncentiveSimple(USDCaddress, "1000000000", userZ, {from:usdcHolder}));
+  assert(fail === expected, "depositIncentiveSimple allowlisting "+expected);
+
   verboseLog("test depositSplitRounds allowlisting")
   fail = await tryCatch(votium.depositSplitRounds(USDCaddress, "1000000000", 2, userZ, 0, [], {from:usdcHolder}));
   assert(fail === expected, "depositSplitRounds allowlisting "+expected);
@@ -434,9 +438,15 @@ async function allowTests(expected) {
   fail = await tryCatch(votium.depositUnevenSplitGauges(USDCaddress, round, [userZ,weth], ["2000054268","3000025743"], 0, [], {from:usdcHolder}));
   assert(fail === expected, "depositUnevenSplitGauges allowlisting "+expected);
 
+  verboseLog("test depositUnevenSplitGaugesSimple allowlisting");
+  fail = await tryCatch(votium.depositUnevenSplitGaugesSimple(USDCaddress, [userZ,weth], ["2000054268","3000025743"], {from:usdcHolder}));
+  assert(fail === expected, "depositUnevenSplitGaugesSimple allowlisting "+expected);
+
   verboseLog("test depositUnevenSplitGaugesRounds allowlisting");
   fail = await tryCatch(votium.depositUnevenSplitGaugesRounds(SPELLaddress, 4, [userZ,weth], ["200000000054268","300000000025743"], 0, [], {from:spellHolder}));
   assert(fail === expected, "depositUnevenSplitGaugesRounds allowlisting "+expected);
+
+
 }
 
 async function endRound() {
@@ -533,8 +543,9 @@ contract("Deploy System and test", async accounts => {
       await web3.eth.sendTransaction({from:weth, to:spellHolder, value:web3.utils.toWei("5", "ether")});
       await web3.eth.sendTransaction({from:weth, to:multisig, value:web3.utils.toWei("5", "ether")});
 
+
       //constructor(address _approved, address _approved2, address _feeAddress, address _distributor)
-      votium = await Votium.new(userY, userX, feeAddress, distributor, {from:deployer});
+      votium = await Votium.new(userY, userX, feeAddress, distributor, "0xe39b8617D571CEe5e75e1EC6B2bb40DdC8CF6Fa3", {from:deployer});
       verboseLog("votium: " +votium.address);
       assert(votium.address != addressZero, "votium address is zero");
 

@@ -45,10 +45,10 @@ module.exports = {
       // provider: () => new HDWalletProvider(mnemonic, `https://mainnet.infura.io/v3/<insert>`),
       provider: () => new HDWalletProvider(api_keys.mnemonic, api_keys.provider_mainnet),
       network_id: 1, 
-      gas: 6721975,
-      gasPrice: 25000000000
+      gas: 5522058,
+      gasPrice: 14000000000
     },
-    mainnetArb: {
+    arbitrum: {
       provider: () => new HDWalletProvider(api_keys.mnemonic, api_keys.provider_arbitrum),
       network_id: 42161,
       gasLimit: 6721975,
@@ -66,7 +66,7 @@ module.exports = {
       // gasLimit: 6721975,
       gasPrice: 200000000000
     },
-    mainnetZkevm: {
+    zkevm: {
       provider: () => new HDWalletProvider(api_keys.mnemonic, api_keys.provider_zkevm),
       network_id: 1101,
       // gasLimit: 6721975,
@@ -77,9 +77,10 @@ module.exports = {
         explorerUrl: 'https://zkevm.polygonscan.com/address',
       }
     },
-    mainnetOp: {
+    optimism: {
+      networkCheckTimeout: 100000,
       provider: () => new HDWalletProvider(api_keys.mnemonic, api_keys.provider_optimism),
-      network_id: 1, 
+      network_id: 10, 
       gas: 6721975,
       gasPrice: 500000000
     },
@@ -112,11 +113,19 @@ module.exports = {
       gasPrice: 500000000
     },
     debug: {
+      provider: () => new HDWalletProvider(api_keys.mnemonic, api_keys.provider_debug),
+      //host: "127.0.0.1",
+      //port: 8545,
+      network_id: 1, 
+      gas: 6721975,
+      gasPrice: 18000000
+    },
+    debugNoLock: {
       host: "127.0.0.1",
       port: 8545,
-      network_id: "1",
+      network_id: 1, 
       gas: 6721975,
-      gasPrice: 500000000
+      gasPrice: 18000000000
     },
   },
 
@@ -129,7 +138,7 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-       version: "0.8.10",    // Fetch exact version from solc-bin (default: truffle's version)
+       version: "0.8.13",    // Fetch exact version from solc-bin (default: truffle's version)
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
        settings: {          // See the solidity docs for advice about optimization and evmVersion
          optimizer: {
