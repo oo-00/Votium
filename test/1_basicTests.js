@@ -983,7 +983,7 @@ contract("Deploy System and test", async accounts => {
       verboseLog("SPELL balance: "+spellBal2.toString());
       verboseLog("SPELL virtual balance: "+spellvBal2.toString());
 
-      incentive = await votium.incentives(round, weth, 0);
+      incentive = await votium.viewIncentive(round, weth, 0);
       verboseLog("   incentive: ");
       verboseLog("     token: "+symbols[incentive.token]);
       verboseLog("     amount: "+incentive.amount.toString());
