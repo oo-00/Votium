@@ -70,8 +70,8 @@ contract Votium is Ownable, ReentrancyGuard {
         approvedTeam[_approved2] = true;
         feeAddress = _feeAddress;
         distributor = _distributor;
-        lastRoundProcessed = (block.timestamp / epochDuration) - 1349;
         transferOwnership(_initialOwner);
+        lastRoundProcessed = activeRound() - 1;
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
@@ -152,11 +152,13 @@ contract Votium is Ownable, ReentrancyGuard {
         _maintainUserRounds(_round);
         _maintainGaugeArrays(_round, _gauge);
         emit NewIncentive(
+            incentives[_round][_gauge].length - 1,
             _token,
             rewardTotal,
             _round,
             _gauge,
             0,
+            new address[](0),
             false
         );
     }
@@ -167,7 +169,7 @@ contract Votium is Ownable, ReentrancyGuard {
         uint256 _round,
         address _gauge,
         uint256 _maxPerVote,
-        address[] memory _excluded
+        address[] calldata _excluded
     ) public {
         require(_round >= activeRound(), "!roundEnded");
         require(_round <= activeRound() + 6, "!farFuture");
@@ -175,7 +177,7 @@ contract Votium is Ownable, ReentrancyGuard {
         _takeDeposit(_token, _amount);
         uint256 rewardTotal = _amount - ((_amount * platformFee) / DENOMINATOR);
         virtualBalance[_token] += rewardTotal;
-        Incentive memory incentive = Incentive({
+        incentives[_round][_gauge].push(Incentive({
             token: _token,
             amount: rewardTotal,
             maxPerVote: _maxPerVote,
@@ -183,19 +185,19 @@ contract Votium is Ownable, ReentrancyGuard {
             recycled: 0,
             depositor: msg.sender,
             excluded: _excluded
-        });
-        incentives[_round][_gauge].push(incentive);
-        userDeposits[msg.sender][_round][_gauge].push(
-            incentives[_round][_gauge].length - 1
-        );
+        }));
+        uint256 id = incentives[_round][_gauge].length - 1;
+        userDeposits[msg.sender][_round][_gauge].push(id);
         _maintainUserRounds(_round);
         _maintainGaugeArrays(_round, _gauge);
         emit NewIncentive(
+            id,
             _token,
             rewardTotal,
             _round,
             _gauge,
             _maxPerVote,
+            _excluded,
             false
         );
     }
@@ -207,7 +209,7 @@ contract Votium is Ownable, ReentrancyGuard {
         uint256 _numRounds,
         address _gauge,
         uint256 _maxPerVote,
-        address[] memory _excluded
+        address[] calldata _excluded
     ) public {
         require(_numRounds < 8, "!farFuture");
         require(_numRounds > 1, "!numRounds");
@@ -229,17 +231,18 @@ contract Votium is Ownable, ReentrancyGuard {
         });
         for (uint256 i = 0; i < _numRounds; i++) {
             incentives[round + i][_gauge].push(incentive);
-            userDeposits[msg.sender][round + i][_gauge].push(
-                incentives[round + i][_gauge].length - 1
-            );
+            uint256 id = incentives[round + i][_gauge].length - 1;
+            userDeposits[msg.sender][round + i][_gauge].push(id);
             _maintainUserRounds(round + i);
             _maintainGaugeArrays(round + i, _gauge);
             emit NewIncentive(
+                id,
                 _token,
                 rewardTotal,
                 round + i,
                 _gauge,
                 _maxPerVote,
+                _excluded,
                 false
             );
         }
@@ -250,9 +253,9 @@ contract Votium is Ownable, ReentrancyGuard {
         address _token,
         uint256 _amount,
         uint256 _round,
-        address[] memory _gauges,
+        address[] calldata _gauges,
         uint256 _maxPerVote,
-        address[] memory _excluded
+        address[] calldata _excluded
     ) public {
         require(_round >= activeRound(), "!roundEnded");
         require(_round <= activeRound() + 6, "!farFuture");
@@ -275,16 +278,17 @@ contract Votium is Ownable, ReentrancyGuard {
         });
         for (uint256 i = 0; i < _gauges.length; i++) {
             incentives[_round][_gauges[i]].push(incentive);
-            userDeposits[msg.sender][_round][_gauges[i]].push(
-                incentives[_round][_gauges[i]].length - 1
-            );
+            uint256 id = incentives[_round][_gauges[i]].length - 1;
+            userDeposits[msg.sender][_round][_gauges[i]].push(id);
             _maintainGaugeArrays(_round, _gauges[i]);
             emit NewIncentive(
+                id,
                 _token,
                 rewardTotal,
                 _round,
                 _gauges[i],
                 _maxPerVote,
+                _excluded,
                 false
             );
         }
@@ -322,16 +326,17 @@ contract Votium is Ownable, ReentrancyGuard {
             _maintainUserRounds(round + i);
             for (uint256 j = 0; j < _gauges.length; j++) {
                 incentives[round + i][_gauges[j]].push(incentive);
-                userDeposits[msg.sender][round + i][_gauges[j]].push(
-                    incentives[round + i][_gauges[j]].length - 1
-                );
+                uint256 id = incentives[round + i][_gauges[j]].length - 1;
+                userDeposits[msg.sender][round + i][_gauges[j]].push(id);
                 _maintainGaugeArrays(round + i, _gauges[j]);
                 emit NewIncentive(
+                    id,
                     _token,
                     rewardTotal,
                     round + i,
                     _gauges[j],
                     _maxPerVote,
+                    _excluded,
                     false
                 );
             }
@@ -343,9 +348,9 @@ contract Votium is Ownable, ReentrancyGuard {
         address _token,
         uint256 _round,
         address[] memory _gauges,
-        uint256[] memory _amounts,
+        uint256[] calldata _amounts,
         uint256 _maxPerVote,
-        address[] memory _excluded
+        address[] calldata _excluded
     ) public {
         require(_gauges.length == _amounts.length, "!length");
         require(_round >= activeRound(), "!roundEnded");
@@ -370,16 +375,17 @@ contract Votium is Ownable, ReentrancyGuard {
             incentive.amount = rewardTotal;
             rewardsTotal += rewardTotal;
             incentives[_round][_gauges[i]].push(incentive);
-            userDeposits[msg.sender][_round][_gauges[i]].push(
-                incentives[_round][_gauges[i]].length - 1
-            );
+            uint256 id = incentives[_round][_gauges[i]].length - 1;
+            userDeposits[msg.sender][_round][_gauges[i]].push(id);
             _maintainGaugeArrays(_round, _gauges[i]);
             emit NewIncentive(
+                id,
                 _token,
                 rewardTotal,
                 _round,
                 _gauges[i],
                 _maxPerVote,
+                _excluded,
                 false
             );
         }
@@ -414,16 +420,17 @@ contract Votium is Ownable, ReentrancyGuard {
             incentive.amount = rewardTotal;
             rewardsTotal += rewardTotal;
             incentives[_round][_gauges[i]].push(incentive);
-            userDeposits[msg.sender][_round][_gauges[i]].push(
-                incentives[_round][_gauges[i]].length - 1
-            );
+            uint256 id = incentives[_round][_gauges[i]].length - 1;
+            userDeposits[msg.sender][_round][_gauges[i]].push(id);
             _maintainGaugeArrays(_round, _gauges[i]);
             emit NewIncentive(
+                id,
                 _token,
                 rewardTotal,
                 _round,
                 _gauges[i],
                 0,
+                new address[](0),
                 false
             );
         }
@@ -438,7 +445,7 @@ contract Votium is Ownable, ReentrancyGuard {
         address[] memory _gauges,
         uint256[] memory _amounts,
         uint256 _maxPerVote,
-        address[] memory _excluded
+        address[] calldata _excluded
     ) public {
         require(_gauges.length == _amounts.length, "!length");
         require(_numRounds < 8, "!farFuture");
@@ -465,17 +472,18 @@ contract Votium is Ownable, ReentrancyGuard {
             rewardsTotal += rewardTotal * _numRounds;
             for (uint256 j = 0; j < _numRounds; j++) {
                 incentives[round + j][_gauges[i]].push(incentive);
-                userDeposits[msg.sender][round + j][_gauges[i]].push(
-                    incentives[round + j][_gauges[i]].length - 1
-                );
+                uint256 id = incentives[round + j][_gauges[i]].length - 1;
+                userDeposits[msg.sender][round + j][_gauges[i]].push(id);
                 _maintainUserRounds(round + j);
                 _maintainGaugeArrays(round + j, _gauges[i]);
                 emit NewIncentive(
+                    id,
                     incentive.token,
                     rewardTotal,
                     round + j,
                     _gauges[i],
-                    _maxPerVote,
+                    incentive.maxPerVote,
+                    incentive.excluded,
                     false
                 );
             }
@@ -531,6 +539,7 @@ contract Votium is Ownable, ReentrancyGuard {
             ] += rewardIncrease;
         }
         emit IncreasedIncentive(
+            _incentive,
             incentives[_round][_gauge][_incentive].token,
             incentives[_round][_gauge][_incentive].amount,
             rewardIncrease,
@@ -588,7 +597,7 @@ contract Votium is Ownable, ReentrancyGuard {
         uint256 _round,
         address _gauge,
         uint256 _incentive
-    ) public {
+    ) public nonReentrant {
         require(_round <= lastRoundProcessed, "!roundNotProcessed");
         require(
             incentives[_round][_gauge][_incentive].depositor == msg.sender ||
@@ -607,7 +616,7 @@ contract Votium is Ownable, ReentrancyGuard {
         uint256 currentRound = activeRound();
         incentives[currentRound][_gauge].push(original);
         incentives[_round][_gauge][_incentive].recycled = original.amount;
-        emit NewIncentive(original.token, original.amount, currentRound, _gauge, original.maxPerVote, true);
+        emit NewIncentive(_incentive, original.token, original.amount, currentRound, _gauge, original.maxPerVote, original.excluded, true);
 
 
     }
@@ -622,7 +631,7 @@ contract Votium is Ownable, ReentrancyGuard {
 
     // allow/deny multiple tokens
     function allowTokens(
-        address[] memory _tokens,
+        address[] calldata _tokens,
         bool _allow
     ) public onlyTeam {
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -667,8 +676,8 @@ contract Votium is Ownable, ReentrancyGuard {
     // submit vote totals and transfer rewards to distributor
     function endRound(
         uint256 _round,
-        address[] memory _gauges,
-        uint256[] memory _totals
+        address[] calldata _gauges,
+        uint256[] calldata _totals
     ) public onlyOwner {
         require(_gauges.length == _totals.length, "!gauges/totals");
         require(_round < activeRound(), "!activeRound");
@@ -692,7 +701,7 @@ contract Votium is Ownable, ReentrancyGuard {
                         incentive.amount -= reward;
                         incentives[_round+1][_gauges[i]].push(incentive);
                         incentives[_round][_gauges[i]][n].recycled = incentive.amount - reward;
-                        emit NewIncentive(incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, true);
+                        emit NewIncentive(incentives[_round+1][_gauges[i]].length-1, incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, incentive.excluded, true);
                     }
                     incentives[_round][_gauges[i]][n].distributed = reward;
                 } else {
@@ -774,11 +783,13 @@ contract Votium is Ownable, ReentrancyGuard {
     /* ========== EVENTS ========== */
 
     event NewIncentive(
-        address _token,
+        uint256 _index,
+        address indexed _token,
         uint256 _amount,
-        uint256 _round,
-        address _gauge,
+        uint256 indexed _round,
+        address indexed _gauge,
         uint256 _maxPerVote,
+        address[] _excluded,
         bool _recycled
     );
     event TokenAllow(address _token, bool _allow);
@@ -794,6 +805,7 @@ contract Votium is Ownable, ReentrancyGuard {
         uint256 _amount
     );
     event IncreasedIncentive(
+        uint256 _index,
         address _token,
         uint256 _total,
         uint256 _increase,

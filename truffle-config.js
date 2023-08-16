@@ -46,7 +46,7 @@ module.exports = {
       provider: () => new HDWalletProvider(api_keys.mnemonic, api_keys.provider_mainnet),
       network_id: 1, 
       gas: 5522058,
-      gasPrice: 14000000000
+      gasPrice: 24000000000
     },
     arbitrum: {
       provider: () => new HDWalletProvider(api_keys.mnemonic, api_keys.provider_arbitrum),
