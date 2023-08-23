@@ -415,6 +415,7 @@ async function testDepositSchema(schema, token, amount, round_s, gauge_s, max, a
 
 async function allowTests(expected) {
   verboseLog("test depositIncentive allowlisting")
+  console.log(round);
   fail = await tryCatch(votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 0, [], {from:usdcHolder}));
   assert(fail === expected, "depositIncentive allowlisting "+expected);
 
@@ -487,7 +488,8 @@ async function endRound() {
     }
     gauges = [userZ, weth];
     totals = [50000, 50000];
-    await votium.endRound(round, gauges, totals, {from:multisig});
+    console.log(round)
+    await votium.endRound(round, gauges, totals, 1, {from:multisig});
     votesReceived = await votium.votesReceived(round, gauges[0]);
     assert.equal(votesReceived.toString(), totals[0].toString(), "votes received should match");
     votesReceived = await votium.votesReceived(round, gauges[1]);
@@ -856,7 +858,7 @@ contract("Deploy System and test", async accounts => {
       var spellvBal = await votium.virtualBalance(SPELLaddress);
       verboseLog("SPELL balance: "+spellBal.toString());
       verboseLog("SPELL virtual balance: "+spellvBal.toString());
-      await votium.endRound(round, [], [], {from:multisig});
+      await votium.endRound(round, [], [], 1, {from:multisig});
       var spellBal2 = await tokens[SPELLaddress].balanceOf(votium.address);
       var spellvBal2 = await votium.virtualBalance(SPELLaddress);
       verboseLog("SPELL balance: "+spellBal2.toString());
@@ -963,10 +965,10 @@ contract("Deploy System and test", async accounts => {
     });
 
     it("Should end rounds empty", async () => {
-      await votium.endRound(round-3, [], [], {from:multisig});
-      await votium.endRound(round-2, [], [], {from:multisig});
-      await votium.endRound(round-1, [], [], {from:multisig});
-      await votium.endRound(round, [], [], {from:multisig});
+      await votium.endRound(round-3, [], [], 1, {from:multisig});
+      await votium.endRound(round-2, [], [], 1, {from:multisig});
+      await votium.endRound(round-1, [], [], 1, {from:multisig});
+      await votium.endRound(round, [], [], 1, {from:multisig});
       var nround = await votium.activeRound();
       assert.equal(nround.toNumber(), round+1, "round should have advanced 4");
       round = nround.toNumber();
