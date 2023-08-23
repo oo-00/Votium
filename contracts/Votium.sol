@@ -586,11 +586,17 @@ contract Votium is Ownable, ReentrancyGuard {
             incentives[_round][_gauge][_incentive].recycled == 0,
             "!recycled"
         );
+        require(
+            incentives[_round][_gauge][_incentive].amount > 0,
+            "!zero"
+        );
         Incentive memory original = incentives[_round][_gauge][_incentive];
         uint256 currentRound = activeRound();
         incentives[currentRound][_gauge].push(original);
+        _maintainGaugeArrays(currentRound, _gauge);
+        uint256 id = incentives[currentRound][_gauge].length - 1; // stack depth
         incentives[_round][_gauge][_incentive].recycled = original.amount;
-        emit NewIncentive(_incentive, original.token, original.amount, currentRound, _gauge, original.maxPerVote, original.excluded, original.depositor, true);
+        emit NewIncentive(id, original.token, original.amount, currentRound, _gauge, original.maxPerVote, original.excluded, original.depositor, true);
     }
 
     /* ========== APPROVED TEAM FUNCTIONS ========== */
@@ -657,6 +663,7 @@ contract Votium is Ownable, ReentrancyGuard {
             ) {
                 Incentive memory incentive = incentives[_round][_gauges[i]][n];
                 uint256 reward;
+                bool recycle;
                 if (incentive.maxPerVote > 0) {
                     reward = incentive.maxPerVote * _totals[i];
                     if (reward >= incentive.amount) {
@@ -666,6 +673,7 @@ contract Votium is Ownable, ReentrancyGuard {
                         incentive.amount -= reward;
                         incentives[_round+1][_gauges[i]].push(incentive);
                         uint256 id = incentives[_round+1][_gauges[i]].length-1; // stack depth
+                        recycle = true;
                         incentives[_round][_gauges[i]][n].recycled = incentive.amount - reward;
                         emit NewIncentive(id, incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
                     }
@@ -676,12 +684,16 @@ contract Votium is Ownable, ReentrancyGuard {
                         // if a gauge is killed or nonexistent, it should not be passed at all
                         incentives[_round+1][_gauges[i]].push(incentive);
                         uint256 id = incentives[_round+1][_gauges[i]].length-1; // stack depth
+                        recycle = true;
                         incentives[_round][_gauges[i]][n].recycled = incentive.amount;
                         emit NewIncentive(id, incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
                     } else {
                         reward = incentive.amount;
                         incentives[_round][_gauges[i]][n].distributed = reward;
                     }
+                }
+                if(recycle) {
+                    _maintainGaugeArrays(_round+1, _gauges[i]);
                 }
                 toTransfer[incentive.token] += reward;
                 toTransferList.push(incentive.token);
