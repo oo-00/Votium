@@ -654,6 +654,7 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round < activeRound(), "!activeRound");
         require(_round - 1 == lastRoundProcessed, "!lastRoundProcessed");
         for (uint256 i = 0; i < _gauges.length; i++) {
+            bool recycle;
             require(votesReceived[_round][_gauges[i]] == 0, "!duplicate");
             votesReceived[_round][_gauges[i]] = _totals[i];
             for (
@@ -663,7 +664,6 @@ contract Votium is Ownable, ReentrancyGuard {
             ) {
                 Incentive memory incentive = incentives[_round][_gauges[i]][n];
                 uint256 reward;
-                bool recycle;
                 if (incentive.maxPerVote > 0) {
                     reward = incentive.maxPerVote * _totals[i];
                     if (reward >= incentive.amount) {
@@ -692,11 +692,11 @@ contract Votium is Ownable, ReentrancyGuard {
                         incentives[_round][_gauges[i]][n].distributed = reward;
                     }
                 }
-                if(recycle) {
-                    _maintainGaugeArrays(_round+1, _gauges[i]);
-                }
                 toTransfer[incentive.token] += reward;
                 toTransferList.push(incentive.token);
+            }
+            if(recycle) {
+                _maintainGaugeArrays(_round+1, _gauges[i]);
             }
         }
         if (_finalize) {
