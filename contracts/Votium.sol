@@ -674,7 +674,7 @@ contract Votium is Ownable, ReentrancyGuard {
                         incentives[_round+1][_gauges[i]].push(incentive);
                         uint256 id = incentives[_round+1][_gauges[i]].length-1; // stack depth
                         recycle = true;
-                        incentives[_round][_gauges[i]][n].recycled = incentive.amount - reward;
+                        incentives[_round][_gauges[i]][n].recycled = incentive.amount; // already subtracted reward
                         emit NewIncentive(id, incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
                     }
                     incentives[_round][_gauges[i]][n].distributed = reward;
