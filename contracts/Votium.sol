@@ -645,7 +645,7 @@ contract Votium is Ownable, ReentrancyGuard {
 
     /* ========== MUTLI-SIG FUNCTIONS ========== */
 
-    // submit vote totals
+    // submit vote totals - excluded address votes should also be excluded from totals submitted
     function submitVoteTotals(
         uint256 _round,
         address[] calldata _gauges,
@@ -660,8 +660,7 @@ contract Votium is Ownable, ReentrancyGuard {
         }
     }
 
-    // handle incentives for gauges that received votes
-    // added finalize param so that large rounds can be ended in separate transactions
+    // handle incentives for gauges that received votes, batchable for both gauges and incentives length
     function endRound(
         uint256 _round,
         address[] calldata _gauges, // can group gauges to stay within gas limits
@@ -675,9 +674,9 @@ contract Votium is Ownable, ReentrancyGuard {
             uint256 round = _round; // stack depth
             uint256 total = votesReceived[round][gauge];
             uint256 next = nextIndexProcessed[round][gauge];
-            uint256 batch = incentives[round][gauge].length - next;
+            uint256 batch = incentives[round][gauge].length - next; // incentives left to process
             if(_batch < batch) {
-                batch = _batch;
+                batch = _batch; // limit batch size to stay within gas limits
             }
             for (
                 uint256 n = next; // will be 0 if no incentives processed yet
@@ -717,6 +716,7 @@ contract Votium is Ownable, ReentrancyGuard {
                 toTransfer[incentive.token] += reward;
                 toTransferList.push(incentive.token);
             }
+            // update nextIndexProcessed
             nextIndexProcessed[round][gauge] = next+batch;
             if(recycle) {
                 _maintainGaugeArrays(round+1, gauge);
@@ -741,9 +741,9 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round < activeRound(), "!activeRound");
         require(_round - 1 == lastRoundProcessed, "!lastRoundProcessed");
         uint256 next = nextGaugeIndexProcessed[_round];
-        uint256 batch = roundGauges[_round].length - next;
+        uint256 batch = roundGauges[_round].length - next; // gauges left to process
         if(_batch < batch) {
-            batch = _batch;
+            batch = _batch; // limit batch size to stay within gas limits
         } else {
             lastRoundProcessed = _round; // only update lastRoundProcessed if all gauges processed
         }
@@ -752,7 +752,7 @@ contract Votium is Ownable, ReentrancyGuard {
                 require(nextIndexProcessed[_round][roundGauges[_round][i]] == incentives[_round][roundGauges[_round][i]].length, "!incentivesProcessed");
             }
         }
-        nextGaugeIndexProcessed[_round] = next+batch;
+        nextGaugeIndexProcessed[_round] = next+batch; // update nextGaugeIndexProcessed
     }
 
 
