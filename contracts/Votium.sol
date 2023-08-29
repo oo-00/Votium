@@ -45,6 +45,9 @@ contract Votium is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => Incentive[])) public incentives; // round => gauge => incentive array
     mapping(uint256 => mapping(address => uint256)) public votesReceived; // round => gauge => votes
 
+    mapping(uint256 => mapping(address => uint256)) public nextIndexProcessed; // round => gauge => last incentive index processed
+    mapping(uint256 => uint256) public nextGaugeIndexProcessed; // round => last gauge index processed
+
     mapping(address => uint256) public virtualBalance; // token => amount
 
     uint256 public lastRoundProcessed; // last round that was processed by multi-sig
@@ -642,65 +645,82 @@ contract Votium is Ownable, ReentrancyGuard {
 
     /* ========== MUTLI-SIG FUNCTIONS ========== */
 
-    // submit vote totals and transfer rewards to distributor
-    // added finalize param so that large rounds can be ended in separate transactions
-    function endRound(
+    // submit vote totals
+    function submitVoteTotals(
         uint256 _round,
         address[] calldata _gauges,
-        uint256[] calldata _totals,
-        bool _finalize
+        uint256[] calldata _totals
     ) public onlyOwner {
         require(_gauges.length == _totals.length, "!gauges/totals");
         require(_round < activeRound(), "!activeRound");
         require(_round - 1 == lastRoundProcessed, "!lastRoundProcessed");
         for (uint256 i = 0; i < _gauges.length; i++) {
-            bool recycle;
-            require(votesReceived[_round][_gauges[i]] == 0, "!duplicate");
+            require(votesReceived[_round][_gauges[i]] == 0, "!votesReceived");
             votesReceived[_round][_gauges[i]] = _totals[i];
+        }
+    }
+
+    // handle incentives for gauges that received votes
+    // added finalize param so that large rounds can be ended in separate transactions
+    function endRound(
+        uint256 _round,
+        address[] calldata _gauges, // can group gauges to stay within gas limits
+        uint256 _batch // how many incentives to process per gauge, to stay within gas limits
+    ) public onlyOwner {
+        require(_round < activeRound(), "!activeRound");
+        require(_round - 1 == lastRoundProcessed, "!lastRoundProcessed");
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            bool recycle;
+            address gauge = _gauges[i];
+            uint256 round = _round; // stack depth
+            uint256 total = votesReceived[round][gauge];
+            uint256 next = nextIndexProcessed[round][gauge];
+            uint256 batch = incentives[round][gauge].length - next;
+            if(_batch < batch) {
+                batch = _batch;
+            }
             for (
-                uint256 n = 0;
-                n < incentives[_round][_gauges[i]].length;
+                uint256 n = next; // will be 0 if no incentives processed yet
+                n < next+batch;
                 n++
             ) {
-                Incentive memory incentive = incentives[_round][_gauges[i]][n];
+                Incentive memory incentive = incentives[round][gauge][n];
                 uint256 reward;
                 if (incentive.maxPerVote > 0) {
-                    reward = incentive.maxPerVote * _totals[i];
+                    reward = incentive.maxPerVote * total;
                     if (reward >= incentive.amount) {
                         reward = incentive.amount;
                     } else {
                         // recycle unused reward
                         incentive.amount -= reward;
-                        incentives[_round+1][_gauges[i]].push(incentive);
-                        uint256 id = incentives[_round+1][_gauges[i]].length-1; // stack depth
+                        incentives[round+1][gauge].push(incentive);
+                        uint256 id = incentives[round+1][gauge].length-1; // stack depth
                         recycle = true;
-                        incentives[_round][_gauges[i]][n].recycled = incentive.amount; // already subtracted reward
-                        emit NewIncentive(id, incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
+                        incentives[round][gauge][n].recycled = incentive.amount; // already subtracted reward
+                        emit NewIncentive(id, incentive.token, incentive.amount, round+1, gauge, incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
                     }
-                    incentives[_round][_gauges[i]][n].distributed = reward;
+                    incentives[round][gauge][n].distributed += reward;
                 } else {
-                    if(_totals[i] == 0) {
+                    if(total == 0) {
                         // can pass 0 votes to recycle reward (for gauges that were not active, but will be next round)
                         // if a gauge is killed or nonexistent, it should not be passed at all
-                        incentives[_round+1][_gauges[i]].push(incentive);
-                        uint256 id = incentives[_round+1][_gauges[i]].length-1; // stack depth
+                        incentives[round+1][gauge].push(incentive);
+                        uint256 id = incentives[round+1][gauge].length-1; // stack depth
                         recycle = true;
-                        incentives[_round][_gauges[i]][n].recycled = incentive.amount;
-                        emit NewIncentive(id, incentive.token, incentive.amount, _round+1, _gauges[i], incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
+                        incentives[round][gauge][n].recycled = incentive.amount;
+                        emit NewIncentive(id, incentive.token, incentive.amount, round+1, gauge, incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
                     } else {
                         reward = incentive.amount;
-                        incentives[_round][_gauges[i]][n].distributed = reward;
+                        incentives[round][gauge][n].distributed += reward;
                     }
                 }
                 toTransfer[incentive.token] += reward;
                 toTransferList.push(incentive.token);
             }
+            nextIndexProcessed[round][gauge] = next+batch;
             if(recycle) {
-                _maintainGaugeArrays(_round+1, _gauges[i]);
+                _maintainGaugeArrays(round+1, gauge);
             }
-        }
-        if (_finalize) {
-            lastRoundProcessed = _round;
         }
         for (uint256 i = 0; i < toTransferList.length; i++) {
             if (toTransfer[toTransferList[i]] == 0) continue; // skip if already transferred
@@ -716,34 +736,25 @@ contract Votium is Ownable, ReentrancyGuard {
         delete toTransferList;
     }
 
-    // invalidate incentive - emergency function to invalidate an incentive
-    // this should only be needed as a last resort if something breaks, to prevent an improper withdrawal
-    function invalidateIncentives(
-        uint256 _round,
-        address _gauge,
-        uint256[] calldata _incentives
-    ) public onlyOwner {
+    // finalize round and check to make sure all incentives were processed for gauges that received votes
+    function finalizeRound(uint256 _round, uint256 _batch) public onlyOwner {
         require(_round < activeRound(), "!activeRound");
-        for (uint256 i = 0; i < _incentives.length; i++) {
-            require(
-                incentives[_round][_gauge][_incentives[i]].depositor ==
-                    msg.sender,
-                "!depositor"
-            );
-            require(
-                incentives[_round][_gauge][_incentives[i]].distributed == 0,
-                "!distributed"
-            );
-            require(
-                incentives[_round][_gauge][_incentives[i]].recycled == 0,
-                "!recycled"
-            );
-            virtualBalance[
-                incentives[_round][_gauge][_incentives[i]].token
-            ] -= incentives[_round][_gauge][_incentives[i]].amount;
-            incentives[_round][_gauge][_incentives[i]].amount = 0;
+        require(_round - 1 == lastRoundProcessed, "!lastRoundProcessed");
+        uint256 next = nextGaugeIndexProcessed[_round];
+        uint256 batch = roundGauges[_round].length - next;
+        if(_batch < batch) {
+            batch = _batch;
+        } else {
+            lastRoundProcessed = _round; // only update lastRoundProcessed if all gauges processed
         }
+        for(uint256 i = next; i < next+batch; i++) {
+            if(votesReceived[_round][roundGauges[_round][i]] > 0) {
+                require(nextIndexProcessed[_round][roundGauges[_round][i]] == incentives[_round][roundGauges[_round][i]].length, "!incentivesProcessed");
+            }
+        }
+        nextGaugeIndexProcessed[_round] = next+batch;
     }
+
 
     // toggle allowlist requirement
     function setAllowlistRequired(bool _requireAllowlist) public onlyOwner {

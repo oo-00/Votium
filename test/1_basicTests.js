@@ -180,6 +180,7 @@ var round;
 var fee;
 var expectedIncentivesLength = {};
 var expectedGaugesLength = {};
+var emptyRounds = [];
 
 var inRoundGauges = {};
 var owner;
@@ -559,8 +560,12 @@ async function endRound() {
     verboseLog("Current round: "+cr.toString());
     gLength = await votium.gaugesLength(round);
     verboseLog("Round "+round+" gauges: "+gLength);
+    gauges = [];
+    totals = [];
     for (var i = 0; i < gLength; i++) {
       gauge = await votium.roundGauges(round, i);
+      gauges.push(gauge);
+      totals.push(50000);
       verboseLog("gauge "+i+" : "+gauge);
       iLength = await votium.incentivesLength(round, gauge);
       for (var j = 0; j < iLength; j++) {
@@ -573,9 +578,18 @@ async function endRound() {
         verboseLog("     distributed: "+incentive.distributed.toString());
         verboseLog("     recycled: "+incentive.recycled.toString());
         verboseLog("     depositor: "+incentive.depositor);
-        toTransfer[incentive.token] = toTransfer[incentive.token].add(incentive.amount);
+        if(Number(incentive.maxPerVote) > 0) {
+          amountAdjusted = new BN(incentive.maxPerVote).mul(new BN("50000"));
+          if(Number(amountAdjusted) > Number(incentive.amount)) {
+            amountAdjusted = incentive.amount;
+          }
+        } else {
+          amountAdjusted = incentive.amount;
+        }
+        toTransfer[incentive.token] = toTransfer[incentive.token].add(amountAdjusted);
       }
     }
+    newBal = {};
     for(t in toTransfer) {
       verboseLog("toTransfer: "+toTransfer[t].toString()+" "+symbols[t]);
       tokenVBal[t] = await votium.virtualBalance(t);
@@ -584,17 +598,24 @@ async function endRound() {
       verboseLog("     balance: "+tokenBal[t].toString());
       toTransfer[t] = toTransfer[t].mul(tokenBal[t]).div(tokenVBal[t]);
       verboseLog("     toTransferAdjusted: "+toTransfer[t].toString());
-      var newBal = tokenBal[t].sub(toTransfer[t]);
-      verboseLog("     new expected balance: "+newBal.toString());
+      newBal[t] = tokenBal[t].sub(toTransfer[t]);
+      verboseLog("     new expected balance: "+newBal[t].toString());
     }
-    gauges = [userZ, weth];
-    totals = [50000, 50000];
+
     console.log(round)
-    await votium.endRound(round, gauges, totals, 1, {from:multisig});
+    await votium.submitVoteTotals(round, gauges, totals, {from:multisig});
+    await votium.endRound(round, gauges, 100, {from:multisig});
+    await votium.finalizeRound(round, 100, {from:multisig});
     votesReceived = await votium.votesReceived(round, gauges[0]);
     assert.equal(votesReceived.toString(), totals[0].toString(), "votes received should match");
     votesReceived = await votium.votesReceived(round, gauges[1]);
     assert.equal(votesReceived.toString(), totals[1].toString(), "votes received should match");
+    for(t in toTransfer) {
+      tokenBal[t] = await tokens[t].balanceOf(votium.address);
+      tokenVBal[t] = await votium.virtualBalance(t);
+      verboseLog("     new balance: "+tokenBal[t].toString());
+      assert.equal(tokenBal[t].toString(), newBal[t].toString(), "balance should match");
+    }
     for (var i = 0; i < gLength; i++) {
       gauge = await votium.roundGauges(round, i);
       verboseLog("gauge "+i+" : "+gauge);
@@ -975,7 +996,9 @@ contract("Deploy System and test", async accounts => {
       var spellvBal = await votium.virtualBalance(SPELLaddress);
       verboseLog("SPELL balance: "+spellBal.toString());
       verboseLog("SPELL virtual balance: "+spellvBal.toString());
-      await votium.endRound(round, [], [], 1, {from:multisig});
+      await votium.endRound(round, [], 100, {from:multisig});
+      emptyRounds.push(round);
+      await votium.finalizeRound(round, 100, {from:multisig});
       var spellBal2 = await tokens[SPELLaddress].balanceOf(votium.address);
       var spellvBal2 = await votium.virtualBalance(SPELLaddress);
       verboseLog("SPELL balance: "+spellBal2.toString());
@@ -1084,10 +1107,18 @@ contract("Deploy System and test", async accounts => {
     });
 
     it("Should end rounds empty", async () => {
-      await votium.endRound(round-3, [], [], 1, {from:multisig});
-      await votium.endRound(round-2, [], [], 1, {from:multisig});
-      await votium.endRound(round-1, [], [], 1, {from:multisig});
-      await votium.endRound(round, [], [], 1, {from:multisig});
+      await votium.endRound(round-3, [], 100, {from:multisig});
+      emptyRounds.push(round-3);
+      await votium.finalizeRound(round-3, 100, {from:multisig});
+      await votium.endRound(round-2, [], 100, {from:multisig});
+      emptyRounds.push(round-2);
+      await votium.finalizeRound(round-2, 100, {from:multisig});
+      await votium.endRound(round-1, [], 100, {from:multisig});
+      emptyRounds.push(round-1);
+      await votium.finalizeRound(round-1, 100, {from:multisig});
+      await votium.endRound(round, [], 100, {from:multisig});
+      emptyRounds.push(round);
+      await votium.finalizeRound(round, 100, {from:multisig});
       var nround = await votium.activeRound();
       assert.equal(nround.toNumber(), round+1, "round should have advanced 4");
       round = nround.toNumber();
@@ -1161,7 +1192,9 @@ contract("Deploy System and test", async accounts => {
     });
 
     it("Should end with 0 votes passed, to recycle", async () => {
-      await votium.endRound(round, [userZ], [0], 1, {from:multisig});
+      await votium.endRound(round, [userZ], 100, {from:multisig});
+      emptyRounds.push(round); // partially empty
+      await votium.finalizeRound(round, 100, {from:multisig});
       var nround = await votium.activeRound();
       round++;
       incentive = await votium.viewIncentive(round, userZ, 0);
@@ -1184,21 +1217,246 @@ contract("Deploy System and test", async accounts => {
       verboseLog("     recycled: "+incentive.recycled.toString());
       verboseLog("     depositor: "+incentive.depositor);
       verboseLog("     excluded: "+incentive.excluded);
+      expectedGaugesLength[round]=1;
+      expectedIncentivesLength[round] = {};
+      expectedIncentivesLength[round][userZ]=2;
     });
 
+    it("Should populate round with many gauges and incentives", async () => {
+      gaugeArr = [userC,userD,userE,userF,userG,userH,userI];
+      amounts = [
+        new BN(100000), 
+        new BN(100000),
+        new BN(100000),
+        new BN(100000),
+        new BN(100000),
+        new BN(100000),
+        new BN(100000)
+      ];
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+      await testDepositSchema("depositUnevenSplitGauges", CVXaddress, null, [round], gaugeArr, 0, amounts);
+    });
 
+    it("Should advance time 2 weeks", async () => {
+      await advanceTime(14*day);
+      nround = await votium.activeRound();
+      assert.equal(nround.toNumber(), round+1, "round should have advanced");
+    });
 
+    it("Should not allow round to be finalized before all incentives are processed", async () => {
+      gaugesLength = await votium.gaugesLength(round);
+      verboseLog("gaugesLength: "+gaugesLength);
+      gauges = {};
+      gaugeArr = [];
+      totalsArr = [];
+      for (var i = 0; i < gaugesLength; i++) {
+        gauge = await votium.roundGauges(round, i);
+        gauges[gauge] = await votium.incentivesLength(round, gauge);
+        gauges[gauge] = gauges[gauge].toNumber();
+        gaugeArr.push(gauge);
+        totalsArr.push(1000000+i);
+      }
+      verboseLog(gauges);
+      // only batch 3 gauges with less than 7 incentive batch size
+      await votium.submitVoteTotals(round, gaugeArr, totalsArr, {from:multisig});
+      await votium.endRound(round, gaugeArr, 2, {from:multisig});
+      fail = await tryCatch(votium.finalizeRound(round, 100, {from:multisig}));
+      assert(fail, "Should not allow round to be finalized before all incentives are processed");
+    });
 
+    it("Should allow round to be ended in batches", async () => {
+      gaugesLength = await votium.gaugesLength(round);
+      verboseLog("gaugesLength: "+gaugesLength);
+      gauges = {};
+      gaugeArr = [];
+      gaugeArr2 = [];
+      for (var i = 0; i < gaugesLength; i++) {
+        gauge = await votium.roundGauges(round, i);
+        gauges[gauge] = await votium.incentivesLength(round, gauge);
+        gauges[gauge] = gauges[gauge].toNumber();
+        if(i<4) {
+          gaugeArr.push(gauge);
+        } else {
+          gaugeArr2.push(gauge);
+        }
+      }
+      verboseLog(gauges);
+      console.log(gaugeArr);
+      console.log(gaugeArr2);
+      // only batch partial gauges with 2 incentive batch size, done enough times to process all incentives
+      await votium.endRound(round, gaugeArr, 2, {from:multisig});
+      verboseLog("round: "+round);
+      for(i=0;i<gaugeArr.length;i++) {
+        verboseLog("   gauge: "+gaugeArr[i]);
+        votesReceived = await votium.votesReceived(round, gaugeArr[i]);
+        verboseLog("1    votesReceived: "+votesReceived.toString());
+        incentiveLength = await votium.incentivesLength(round, gaugeArr[i]);
+        for(j=0;j<incentiveLength;j++) {
+          incentive = await votium.viewIncentive(round, gaugeArr[i], j);
+          verboseLog("1   incentive: ");
+          verboseLog("     token: "+symbols[incentive.token]);
+          verboseLog("     amount: "+incentive.amount.toString());
+          verboseLog("     distributed: "+incentive.distributed.toString());
+        }
+      }
+      await votium.endRound(round, gaugeArr, 2, {from:multisig});
+      verboseLog("round: "+round);
+      for(i=0;i<gaugeArr.length;i++) {
+        verboseLog("   gauge: "+gaugeArr[i]);
+        votesReceived = await votium.votesReceived(round, gaugeArr[i]);
+        verboseLog("1    votesReceived: "+votesReceived.toString());
+        incentiveLength = await votium.incentivesLength(round, gaugeArr[i]);
+        for(j=0;j<incentiveLength;j++) {
+          incentive = await votium.viewIncentive(round, gaugeArr[i], j);
+          verboseLog("2   incentive: ");
+          verboseLog("     token: "+symbols[incentive.token]);
+          verboseLog("     amount: "+incentive.amount.toString());
+          verboseLog("     distributed: "+incentive.distributed.toString());
+        }
+      }
+      await votium.endRound(round, gaugeArr, 2, {from:multisig});
+      verboseLog("round: "+round);
+      for(i=0;i<gaugeArr.length;i++) {
+        verboseLog("   gauge: "+gaugeArr[i]);
+        votesReceived = await votium.votesReceived(round, gaugeArr[i]);
+        verboseLog("1    votesReceived: "+votesReceived.toString());
+        incentiveLength = await votium.incentivesLength(round, gaugeArr[i]);
+        for(j=0;j<incentiveLength;j++) {
+          incentive = await votium.viewIncentive(round, gaugeArr[i], j);
+          verboseLog("3   incentive: ");
+          verboseLog("     token: "+symbols[incentive.token]);
+          verboseLog("     amount: "+incentive.amount.toString());
+          verboseLog("     distributed: "+incentive.distributed.toString());
+        }
+      }
+      await votium.endRound(round, gaugeArr, 2, {from:multisig});
+      verboseLog("round: "+round);
+      for(i=0;i<gaugeArr.length;i++) {
+        verboseLog("   gauge: "+gaugeArr[i]);
+        votesReceived = await votium.votesReceived(round, gaugeArr[i]);
+        verboseLog("1    votesReceived: "+votesReceived.toString());
+        incentiveLength = await votium.incentivesLength(round, gaugeArr[i]);
+        for(j=0;j<incentiveLength;j++) {
+          incentive = await votium.viewIncentive(round, gaugeArr[i], j);
+          verboseLog("4   incentive: ");
+          verboseLog("     token: "+symbols[incentive.token]);
+          verboseLog("     amount: "+incentive.amount.toString());
+          verboseLog("     distributed: "+incentive.distributed.toString());
+        }
+      }
 
+      await votium.endRound(round, gaugeArr2, 2, {from:multisig});
+      await votium.endRound(round, gaugeArr2, 2, {from:multisig});
+      await votium.endRound(round, gaugeArr2, 2, {from:multisig});
+      await votium.endRound(round, gaugeArr2, 2, {from:multisig});
 
+      lastRoundProcessed = await votium.lastRoundProcessed();
+      verboseLog("lastRoundProcessed: "+lastRoundProcessed);
+      await votium.finalizeRound(round, 2, {from:multisig});
+      lastRoundProcessed = await votium.lastRoundProcessed();
+      assert.equal(lastRoundProcessed.toNumber(), lastRoundProcessed, "lastRoundProcessed should remain "+lastRoundProcessed);
+      await votium.finalizeRound(round, 2, {from:multisig});
+      lastRoundProcessed = await votium.lastRoundProcessed();
+      assert.equal(lastRoundProcessed.toNumber(), lastRoundProcessed, "lastRoundProcessed should remain "+lastRoundProcessed);
+      await votium.finalizeRound(round, 2, {from:multisig});
+      lastRoundProcessed = await votium.lastRoundProcessed();
+      assert.equal(lastRoundProcessed.toNumber(), lastRoundProcessed, "lastRoundProcessed should remain "+lastRoundProcessed);
+      await votium.finalizeRound(round, 2, {from:multisig});
+      lastRoundProcessed = await votium.lastRoundProcessed();
+      assert.equal(lastRoundProcessed.toNumber(), round, "lastRoundProcessed should update to "+round);
 
+      verboseLog("round: "+round);
+      for(i=0;i<gaugeArr.length;i++) {
+        verboseLog("   gauge: "+gaugeArr[i]);
+        votesReceived = await votium.votesReceived(round, gaugeArr[i]);
+        verboseLog("1    votesReceived: "+votesReceived.toString());
+        incentiveLength = await votium.incentivesLength(round, gaugeArr[i]);
+        for(j=0;j<incentiveLength;j++) {
+          incentive = await votium.viewIncentive(round, gaugeArr[i], j);
+          verboseLog("   incentive: ");
+          verboseLog("     token: "+symbols[incentive.token]);
+          verboseLog("     amount: "+incentive.amount.toString());
+          verboseLog("     maxPerVote: "+incentive.maxPerVote.toString());
+          verboseLog("     distributed: "+incentive.distributed.toString());
+          verboseLog("     recycled: "+incentive.recycled.toString());
+          verboseLog("     depositor: "+incentive.depositor);
+          verboseLog("     excluded: "+incentive.excluded);
+        }
+      }
+      for(i=0;i<gaugeArr2.length;i++) {
+        verboseLog("   gauge: "+gaugeArr[i]);
+        votesReceived = await votium.votesReceived(round, gaugeArr[i]);
+        verboseLog("1    votesReceived: "+votesReceived.toString());
+        incentiveLength = await votium.incentivesLength(round, gaugeArr[i]);
+        for(j=0;j<incentiveLength;j++) {
+          votesReceived = await votium.votesReceived(round, gaugeArr[i]);
+          verboseLog("   votesReceived: "+votesReceived.toString());
+          incentive = await votium.viewIncentive(round, gaugeArr2[i], j);
+          verboseLog("   incentive: ");
+          verboseLog("     token: "+symbols[incentive.token]);
+          verboseLog("     amount: "+incentive.amount.toString());
+          verboseLog("     maxPerVote: "+incentive.maxPerVote.toString());
+          verboseLog("     distributed: "+incentive.distributed.toString());
+          verboseLog("     recycled: "+incentive.recycled.toString());
+          verboseLog("     depositor: "+incentive.depositor);
+          verboseLog("     excluded: "+incentive.excluded);
+        }
+      }
+    });
 
+    it("Should withdraw incentives from empty rounds", async () => {
+      tokenAmounts = {};
+      for(r in emptyRounds) {
+        // check for withdrawable incentives
+        rnd = emptyRounds[r];
+        gaugesLength = await votium.gaugesLength(rnd);
+        gauges = [];
+        for (var i = 0; i < gaugesLength; i++) {
+          gauge = await votium.roundGauges(rnd, i);
+          gauges.push(gauge);
+          incentivesLength = await votium.incentivesLength(rnd, gauge);
+          for (var j = 0; j < incentivesLength; j++) {
+            incentive = await votium.viewIncentive(rnd, gauge, j);
+            if(Number(incentive.distributed) == 0 && Number(incentive.recycled) == 0 && Number(incentive.amount) != 0) {
+              verboseLog("round "+rnd+" gauge "+gauge+" incentive "+j+" is withdrawable");
+              if(tokenAmounts[incentive.token] == undefined) { tokenAmounts[incentive.token] = new BN(0); }
+              tokenAmounts[incentive.token] = tokenAmounts[incentive.token].add(new BN(incentive.amount.toString()));
+              verboseLog(incentive.amount.toString());
+              verboseLog(incentive.depositor);
+              await votium.withdrawUnprocessed(rnd, gauge, j, {from:incentive.depositor});
+            }
+          }
+        }
+      }
+      verboseLog(tokenAmounts);
+    });
 
+    it("Should have no balances or incentives remaining, except for unprocessed tokens sent directly to contract", async () => {
+      round++;
+      spellbalance = await tokens[SPELLaddress].balanceOf(votium.address);
+      verboseLog("SPELL balance: "+spellbalance.toString());
+      spellvbalance = await votium.virtualBalance(SPELLaddress);
+      verboseLog("SPELL virtual balance: "+spellvbalance.toString());
+      usdcbalance = await tokens[USDCaddress].balanceOf(votium.address);
+      verboseLog("USDC balance: "+usdcbalance.toString());
+      usdcvbalance = await votium.virtualBalance(USDCaddress);
+      verboseLog("USDC virtual balance: "+usdcvbalance.toString());
+      cvxbalance = await tokens[CVXaddress].balanceOf(votium.address);
+      verboseLog("CVX balance: "+cvxbalance.toString());
+      cvxvbalance = await votium.virtualBalance(CVXaddress);
+      verboseLog("CVX virtual balance: "+cvxvbalance.toString());
 
+      for(i = round; i<round+8; i++) {
+        gaugesLength = await votium.gaugesLength(i);
+        verboseLog("Round "+i+" gaugesLength: "+gaugesLength);
+      }
+    });
 
-
-
-    
     return;
 });
 
