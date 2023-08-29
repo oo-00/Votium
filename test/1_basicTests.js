@@ -1450,11 +1450,33 @@ contract("Deploy System and test", async accounts => {
       verboseLog("CVX balance: "+cvxbalance.toString());
       cvxvbalance = await votium.virtualBalance(CVXaddress);
       verboseLog("CVX virtual balance: "+cvxvbalance.toString());
+    });
 
-      for(i = round; i<round+8; i++) {
-        gaugesLength = await votium.gaugesLength(i);
-        verboseLog("Round "+i+" gaugesLength: "+gaugesLength);
-      }
+    it("Should process excluded amounts correctly", async () => {
+      await votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 10000, [userA], {from:usdcHolder});
+      await votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 10000, [userX], {from:usdcHolder});
+      await votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 10000, [userX,userY], {from:usdcHolder});
+      await advanceTime(14*day);
+      nround = await votium.activeRound();
+      assert.equal(nround.toNumber(), round+1, "round should have advanced");
+
+      await votium.submitVoteTotals(round, [userZ], [10000], {from:multisig});
+      // would normally allow 10000 * 10000 to be consumed, if no exclusion votes (100 out of 960)
+      await votium.submitExcludedTotals(round, userZ, [userA,userX,userY], [10,100,1000], {from:multisig});
+      await votium.endRound(round, [userZ], 100, {from:multisig});
+      await votium.finalizeRound(round, 100, {from:multisig});
+
+      // incentive 0 should be 10000-10 = 9990 * 10000 = 99900000
+      incentive = await votium.viewIncentive(round, userZ, 0);
+      assert(incentive.distributed.toString() == "99900000", "incentive 0 should be 99900000");
+
+      // incentive 1 should be 10000-100 = 9900 * 10000 = 99000000
+      incentive = await votium.viewIncentive(round, userZ, 1);
+      assert(incentive.distributed.toString() == "99000000", "incentive 1 should be 99000000");
+
+      // incentive 2 should be 10000-100-1000 = 8900 * 10000 = 89000000
+      incentive = await votium.viewIncentive(round, userZ, 2);
+      assert(incentive.distributed.toString() == "89000000", "incentive 2 should be 89000000");
     });
 
     return;

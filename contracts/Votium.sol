@@ -44,6 +44,7 @@ contract Votium is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => bool)) public inRoundGauges; // round => gauge => bool
     mapping(uint256 => mapping(address => Incentive[])) public incentives; // round => gauge => incentive array
     mapping(uint256 => mapping(address => uint256)) public votesReceived; // round => gauge => votes
+    mapping(uint256 => mapping(address => mapping(address => uint256))) public excludedVotesReceived; // round => gauge => excluded => votes
 
     mapping(uint256 => mapping(address => uint256)) private nextIndexProcessed; // round => gauge => last incentive index processed
     mapping(uint256 => uint256) private nextGaugeIndexProcessed; // round => last gauge index processed
@@ -645,7 +646,7 @@ contract Votium is Ownable, ReentrancyGuard {
 
     /* ========== MUTLI-SIG FUNCTIONS ========== */
 
-    // submit vote totals - excluded address votes should also be excluded from totals submitted
+    // submit vote totals
     function submitVoteTotals(
         uint256 _round,
         address[] calldata _gauges,
@@ -660,6 +661,23 @@ contract Votium is Ownable, ReentrancyGuard {
         }
     }
 
+    // submit excluded address totals
+    function submitExcludedTotals(
+        uint256 _round, 
+        address _gauge, 
+        address[] calldata _excluded, 
+        uint256[] calldata _totals
+    ) public onlyOwner {
+        require(_excluded.length == _totals.length, "!excluded/totals");
+        require(_round < activeRound(), "!activeRound");
+        require(_round - 1 == lastRoundProcessed, "!lastRoundProcessed");
+        for (uint256 i = 0; i < _excluded.length; i++) {
+            require(excludedVotesReceived[_round][_gauge][_excluded[i]] == 0, "!excludedVotesReceived");
+            excludedVotesReceived[_round][_gauge][_excluded[i]] = _totals[i];
+        }
+
+    }
+
     // handle incentives for gauges that received votes, batchable for both gauges and incentives length
     function endRound(
         uint256 _round,
@@ -672,7 +690,6 @@ contract Votium is Ownable, ReentrancyGuard {
             bool recycle;
             address gauge = _gauges[i];
             uint256 round = _round; // stack depth
-            uint256 total = votesReceived[round][gauge];
             uint256 next = nextIndexProcessed[round][gauge];
             uint256 batch = incentives[round][gauge].length - next; // incentives left to process
             if(_batch < batch) {
@@ -685,8 +702,16 @@ contract Votium is Ownable, ReentrancyGuard {
             ) {
                 Incentive memory incentive = incentives[round][gauge][n];
                 uint256 reward;
+                // get submited vote totals
+                uint256 totalVotes = votesReceived[round][gauge];
+                // remove excluded votes for specific incentive in gauge
+                if(incentive.excluded.length > 0) {
+                    for(uint256 j = 0; j < incentive.excluded.length; j++) {
+                        totalVotes -= excludedVotesReceived[round][gauge][incentive.excluded[j]];
+                    }
+                }
                 if (incentive.maxPerVote > 0) {
-                    reward = incentive.maxPerVote * total;
+                    reward = incentive.maxPerVote * totalVotes;
                     if (reward >= incentive.amount) {
                         reward = incentive.amount;
                     } else {
@@ -700,7 +725,7 @@ contract Votium is Ownable, ReentrancyGuard {
                     }
                     incentives[round][gauge][n].distributed = reward;
                 } else {
-                    if(total == 0) {
+                    if(totalVotes == 0) {
                         // can pass 0 votes to recycle reward (for gauges that were not active, but will be next round)
                         // if a gauge is killed or nonexistent, it should not be passed at all
                         incentives[round+1][gauge].push(incentive);
