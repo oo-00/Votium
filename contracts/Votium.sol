@@ -28,7 +28,7 @@ contract Votium is Ownable, ReentrancyGuard {
     uint256 private maxMaxPerVote = type(uint256).max/(100000000*10**18); // to prevent overflow when ending round
 
     bool public requireAllowlist = true; // begin with erc20 allow list in effect
-    bool public allowExclusions = false; // enable ability to exclude addresses
+    uint256 public maxExclusions; // number of excluded addresses allowed per incentive
 
     struct Incentive {
         address token;
@@ -155,7 +155,7 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round >= activeRound(), "!roundEnded");
         require(_round <= activeRound() + 6, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
-        if(!allowExclusions) { require(_excluded.length == 0, "!excluded"); }
+        require(_excluded.length <= maxExclusions, "!excluded");
         _takeDeposit(_token, _amount);
         uint256 rewardTotal = _amount - ((_amount * platformFee) / DENOMINATOR);
         virtualBalance[_token] += rewardTotal;
@@ -194,7 +194,7 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_numRounds < 8, "!farFuture");
         require(_numRounds > 1, "!numRounds");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
-        if(!allowExclusions) { require(_excluded.length == 0, "!excluded"); }
+        require(_excluded.length <= maxExclusions, "!excluded");
 
         uint256 totalDeposit = _amount * _numRounds;
         _takeDeposit(_token, totalDeposit);
@@ -240,7 +240,7 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round <= activeRound() + 6, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
         require(_gauges.length > 1, "!gauges");
-        if(!allowExclusions) { require(_excluded.length == 0, "!excluded"); }
+        require(_excluded.length <= maxExclusions, "!excluded"); 
 
         uint256 totalDeposit = _amount * _gauges.length;
         _takeDeposit(_token, totalDeposit);
@@ -286,7 +286,7 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_numRounds > 1, "!numRounds");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
         require(_gauges.length > 1, "!gauges");
-        if(!allowExclusions) { require(_excluded.length == 0, "!excluded"); }
+        require(_excluded.length <= maxExclusions, "!excluded"); 
 
         uint256 totalDeposit = _amount * _numRounds * _gauges.length;
         _takeDeposit(_token, totalDeposit);
@@ -335,7 +335,7 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round <= activeRound() + 6, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
 
-        if(!allowExclusions) { require(_excluded.length == 0, "!excluded"); }
+        require(_excluded.length <= maxExclusions, "!excluded"); 
         uint256 totalDeposit;
         uint256 rewardsTotal;
         Incentive memory incentive = Incentive({
@@ -428,7 +428,7 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_numRounds < 8, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
         require(_numRounds > 1, "!numRounds");
-        if(!allowExclusions) { require(_excluded.length == 0, "!excluded"); }
+        require(_excluded.length <= maxExclusions, "!excluded"); 
         uint256 totalDeposit;
         uint256 rewardsTotal;
         Incentive memory incentive = Incentive({
@@ -809,9 +809,9 @@ contract Votium is Ownable, ReentrancyGuard {
     }
 
     // toggle allowExclusions
-    function setAllowExclusions(bool _allowExclusions) public onlyOwner {
-        allowExclusions = _allowExclusions;
-        emit AllowExclusions(_allowExclusions);
+    function setMaxExclusions(uint256 _maxExclusions) public onlyOwner {
+        maxExclusions = _maxExclusions;
+        emit MaxExclusions(_maxExclusions);
     }
 
     // update fee address
@@ -870,7 +870,7 @@ contract Votium is Ownable, ReentrancyGuard {
     );
     event TokenAllow(address _token, bool _allow);
     event AllowlistRequirement(bool _requireAllowlist);
-    event AllowExclusions(bool _allowExclusions);
+    event MaxExclusions(uint256 _maxExclusions);
     event UpdatedFee(uint256 _feeAmount);
     event ModifiedTeam(address _member, bool _approval);
     event UpdatedDistributor(address _distributor);

@@ -1154,10 +1154,10 @@ contract("Deploy System and test", async accounts => {
       assert(fail, "Should not allow deposit with exclusions");
     });
 
-    it("Should setAllowExclusions", async () => {
-      await votium.setAllowExclusions(true, {from:multisig});
-      var allow = await votium.allowExclusions();
-      assert.equal(allow, true, "Should allow exclusions");
+    it("Should setMaxExclusions", async () => {
+      await votium.setMaxExclusions(5, {from:multisig});
+      var allow = await votium.maxExclusions();
+      assert.equal(allow.toString(), "5", "Should allow exclusions");
     });
 
     it("Should allow deposit with exclusions", async () => {
