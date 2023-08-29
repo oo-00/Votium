@@ -780,6 +780,27 @@ contract Votium is Ownable, ReentrancyGuard {
         nextGaugeIndexProcessed[_round] = next+batch; // update nextGaugeIndexProcessed
     }
 
+    // invalidate incentive - for spam deposits with tiny maxPerVote
+    // to prevent end of round from being clogged with ~$0 rewards
+    function invalidateIncentive(
+        uint256 _round,
+        address _gauge,
+        uint256 _incentive
+    ) public onlyOwner {
+        require(_round < activeRound(), "!activeRound");
+        // can only invalidate incentives with maxPerVote > 0
+        require(
+            incentives[_round][_gauge][_incentive].maxPerVote > 0,
+                "!maxPerVote"
+        );
+        virtualBalance[
+            incentives[_round][_gauge][_incentive].token
+        ] -= incentives[_round][_gauge][_incentive].amount;
+        incentives[_round][_gauge][_incentive].amount = 0;
+
+        // spam incentives will not be withdrawable or be part of a recycled incentive,
+        // but will be consumed if new rewards use the same token, as if it were a positive token rebase passed along to voters
+    }
 
     // toggle allowlist requirement
     function setAllowlistRequired(bool _requireAllowlist) public onlyOwner {
