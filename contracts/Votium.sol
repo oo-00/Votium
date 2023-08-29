@@ -155,7 +155,9 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round >= activeRound(), "!roundEnded");
         require(_round <= activeRound() + 6, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
-        require(_excluded.length <= maxExclusions, "!excluded");
+        if(_excluded.length > 0) {
+            _checkExclusions(_excluded);
+        }
         _takeDeposit(_token, _amount);
         uint256 rewardTotal = _amount - ((_amount * platformFee) / DENOMINATOR);
         virtualBalance[_token] += rewardTotal;
@@ -194,8 +196,9 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_numRounds < 8, "!farFuture");
         require(_numRounds > 1, "!numRounds");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
-        require(_excluded.length <= maxExclusions, "!excluded");
-
+        if(_excluded.length > 0) {
+            _checkExclusions(_excluded);
+        }
         uint256 totalDeposit = _amount * _numRounds;
         _takeDeposit(_token, totalDeposit);
         uint256 rewardTotal = _amount - ((_amount * platformFee) / DENOMINATOR);
@@ -240,8 +243,9 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round <= activeRound() + 6, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
         require(_gauges.length > 1, "!gauges");
-        require(_excluded.length <= maxExclusions, "!excluded"); 
-
+        if(_excluded.length > 0) {
+            _checkExclusions(_excluded);
+        }
         uint256 totalDeposit = _amount * _gauges.length;
         _takeDeposit(_token, totalDeposit);
         uint256 rewardTotal = _amount - ((_amount * platformFee) / DENOMINATOR);
@@ -280,14 +284,15 @@ contract Votium is Ownable, ReentrancyGuard {
         uint256 _numRounds,
         address[] memory _gauges,
         uint256 _maxPerVote,
-        address[] memory _excluded
+        address[] calldata _excluded
     ) public {
         require(_numRounds < 8, "!farFuture");
         require(_numRounds > 1, "!numRounds");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
         require(_gauges.length > 1, "!gauges");
-        require(_excluded.length <= maxExclusions, "!excluded"); 
-
+        if(_excluded.length > 0) {
+            _checkExclusions(_excluded);
+        }
         uint256 totalDeposit = _amount * _numRounds * _gauges.length;
         _takeDeposit(_token, totalDeposit);
         uint256 rewardTotal = _amount - ((_amount * platformFee) / DENOMINATOR);
@@ -302,18 +307,21 @@ contract Votium is Ownable, ReentrancyGuard {
             depositor: msg.sender,
             excluded: _excluded
         });
+        uint256 maxPerVote = _maxPerVote; // stack depth
+        address[] calldata excluded = _excluded; // stack depth
         for (uint256 i = 0; i < _numRounds; i++) {
             for (uint256 j = 0; j < _gauges.length; j++) {
-                incentives[round + i][_gauges[j]].push(incentive);
-                _maintainGaugeArrays(round + i, _gauges[j]);
+                address gauge = _gauges[j]; // stack depth
+                incentives[round + i][gauge].push(incentive);
+                _maintainGaugeArrays(round + i, gauge);
                 emit NewIncentive(
-                    incentives[round + i][_gauges[j]].length - 1,
+                    incentives[round + i][gauge].length - 1,
                     incentive.token,
                     rewardTotal,
                     round + i,
-                    _gauges[j],
-                    _maxPerVote,
-                    _excluded,
+                    gauge,
+                    maxPerVote,
+                    excluded,
                     msg.sender,
                     false
                 );
@@ -334,8 +342,9 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_round >= activeRound(), "!roundEnded");
         require(_round <= activeRound() + 6, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
-
-        require(_excluded.length <= maxExclusions, "!excluded"); 
+        if(_excluded.length > 0) {
+            _checkExclusions(_excluded);
+        }
         uint256 totalDeposit;
         uint256 rewardsTotal;
         Incentive memory incentive = Incentive({
@@ -428,7 +437,9 @@ contract Votium is Ownable, ReentrancyGuard {
         require(_numRounds < 8, "!farFuture");
         require(_maxPerVote < maxMaxPerVote, "!highMax"); // prevent overflow when ending round
         require(_numRounds > 1, "!numRounds");
-        require(_excluded.length <= maxExclusions, "!excluded"); 
+        if(_excluded.length > 0) {
+            _checkExclusions(_excluded);
+        }
         uint256 totalDeposit;
         uint256 rewardsTotal;
         Incentive memory incentive = Incentive({
@@ -641,6 +652,16 @@ contract Votium is Ownable, ReentrancyGuard {
         if (!inRoundGauges[_round][_gauge]) {
             roundGauges[_round].push(_gauge);
             inRoundGauges[_round][_gauge] = true;
+        }
+    }
+
+    function _checkExclusions(address[] calldata _excluded) internal view {
+        require(_excluded.length <= maxExclusions, "!excluded");
+        uint160 addressHeight;
+        for(uint256 i = 0; i < _excluded.length; i++) {
+            uint160 height = uint160(_excluded[i]);
+            require(height > addressHeight, "!sorted");
+            addressHeight = height;
         }
     }
 
