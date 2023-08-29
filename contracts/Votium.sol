@@ -45,8 +45,8 @@ contract Votium is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => Incentive[])) public incentives; // round => gauge => incentive array
     mapping(uint256 => mapping(address => uint256)) public votesReceived; // round => gauge => votes
 
-    mapping(uint256 => mapping(address => uint256)) public nextIndexProcessed; // round => gauge => last incentive index processed
-    mapping(uint256 => uint256) public nextGaugeIndexProcessed; // round => last gauge index processed
+    mapping(uint256 => mapping(address => uint256)) private nextIndexProcessed; // round => gauge => last incentive index processed
+    mapping(uint256 => uint256) private nextGaugeIndexProcessed; // round => last gauge index processed
 
     mapping(address => uint256) public virtualBalance; // token => amount
 
@@ -699,7 +699,7 @@ contract Votium is Ownable, ReentrancyGuard {
                         incentives[round][gauge][n].recycled = incentive.amount; // already subtracted reward
                         emit NewIncentive(id, incentive.token, incentive.amount, round+1, gauge, incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
                     }
-                    incentives[round][gauge][n].distributed += reward;
+                    incentives[round][gauge][n].distributed = reward;
                 } else {
                     if(total == 0) {
                         // can pass 0 votes to recycle reward (for gauges that were not active, but will be next round)
@@ -711,7 +711,7 @@ contract Votium is Ownable, ReentrancyGuard {
                         emit NewIncentive(id, incentive.token, incentive.amount, round+1, gauge, incentive.maxPerVote, incentive.excluded, incentive.depositor, true);
                     } else {
                         reward = incentive.amount;
-                        incentives[round][gauge][n].distributed += reward;
+                        incentives[round][gauge][n].distributed = reward;
                     }
                 }
                 toTransfer[incentive.token] += reward;
