@@ -1160,6 +1160,13 @@ contract("Deploy System and test", async accounts => {
       assert.equal(allow.toString(), "5", "Should allow exclusions");
     });
 
+    it("Should not allow deposit with exclusions in wrong order, or duplicate", async () => {
+      fail = await tryCatch(votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 0, [userY,userX], {from:usdcHolder}));
+      assert(fail, "Should not allow deposit with exclusions in wrong order");
+      fail = await tryCatch(votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 0, [userY,userY], {from:usdcHolder}));
+      assert(fail, "Should not allow deposit with exclusions duplicate");
+    });
+
     it("Should allow deposit with exclusions", async () => {
       await votium.depositIncentive(USDCaddress, "1000000000", round, userZ, 0, [userX], {from:usdcHolder});
       await votium.depositIncentive(USDCaddress, "500000000", round, userZ, 0, [userX,userY], {from:usdcHolder});
