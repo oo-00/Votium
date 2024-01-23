@@ -280,5 +280,17 @@
     "label": "convex-prisma",
     "symbol": "cvxPrisma",
     "decimals": 18
+  },
+  {
+    "value": "0xe063F04f280c60aECa68b38341C2eEcBeC703ae2",
+    "label": "f-x-protocol-leveraged-eth",
+    "symbol": "XETH",
+    "decimals": 18
+  },
+  {
+    "value": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+    "label": "paypal-usd",
+    "symbol": "PYUSD",
+    "decimals": 6
   }
 ]
