@@ -292,5 +292,11 @@
     "label": "paypal-usd",
     "symbol": "PYUSD",
     "decimals": 6
+  },
+  {
+    "value": "0x4591dbff62656e7859afe5e45f6f47d3669fbb28",
+    "label": "prisma-mkusd",
+    "symbol": "mkUSD",
+    "decimals": 18
   }
 ]
