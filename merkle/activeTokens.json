@@ -298,5 +298,23 @@
     "label": "prisma-mkusd",
     "symbol": "mkUSD",
     "decimals": 18
+  },
+  {
+    "value": "0xc55126051b22ebb829d00368f4b12bde432de5da",
+    "label": "redacted",
+    "symbol": "BTRFLY",
+    "decimals": 18
+  },
+  {
+    "value": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "label": "tether",
+    "symbol": "USDT",
+    "decimals": 6
+  },
+  {
+    "value": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+    "label": "crvusd",
+    "symbol": "crvUSD",
+    "decimals": 18
   }
 ]
