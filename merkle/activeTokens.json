@@ -316,5 +316,17 @@
     "label": "crvusd",
     "symbol": "crvUSD",
     "decimals": 18
+  },
+  {
+    "value": "0x365AccFCa291e7D3914637ABf1F7635dB165Bb09",
+    "label": "fxn-token",
+    "symbol": "FXN",
+    "decimals": 18
+  },
+  {
+    "value": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+    "label": "gho",
+    "symbol": "GHO",
+    "decimals": 18
   }
 ]
