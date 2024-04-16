@@ -328,5 +328,11 @@
     "label": "gho",
     "symbol": "GHO",
     "decimals": 18
+  },
+  {
+    "value": "0x961dd84059505d59f82ce4fb87d3c09bec65301d",
+    "label": "tenxcommunityjp",
+    "symbol": "TXJP",
+    "decimals": 8
   }
 ]
