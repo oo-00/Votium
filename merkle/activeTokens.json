@@ -334,5 +334,11 @@
     "label": "tenxcommunityjp",
     "symbol": "TXJP",
     "decimals": 8
+  },
+  {
+    "value": "0xf091867EC603A6628eD83D274E835539D82e9cc8",
+    "label": "zetachain",
+    "symbol": "ZETA",
+    "decimals": 18
   }
 ]
