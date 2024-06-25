@@ -340,5 +340,11 @@
     "label": "zetachain",
     "symbol": "ZETA",
     "decimals": 18
+  },
+  {
+    "value": "0x6b5204B0Be36771253Cc38e88012E02B752f0f36",
+    "label": "zunami-governance-token",
+    "symbol": "ZUN",
+    "decimals": 18
   }
 ]
