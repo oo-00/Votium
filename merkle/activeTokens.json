@@ -346,5 +346,11 @@
     "label": "zunami-governance-token",
     "symbol": "ZUN",
     "decimals": 18
+  },
+  {
+    "value": "0x6DF0E641FC9847c0c6Fde39bE6253045440c14d3",
+    "label": "dinero-2",
+    "symbol": "DINERO",
+    "decimals": 18
   }
 ]
