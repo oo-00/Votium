@@ -352,5 +352,29 @@
     "label": "dinero-2",
     "symbol": "DINERO",
     "decimals": 18
+  },
+  {
+    "value": "0x626E8036dEB333b408Be468F951bdB42433cBF18",
+    "label": "aioz-network",
+    "symbol": "AIOZ",
+    "decimals": 18
+  },
+  {
+    "value": "0x419905009e4656fdC02418C7Df35B1E61Ed5F726",
+    "label": "resupply",
+    "symbol": "RSUP",
+    "decimals": 18
+  },
+  {
+    "value": "0x5de8ab7e27f6e7a1fff3e5b337584aa43961beef",
+    "label": "smardex",
+    "symbol": "SDEX",
+    "decimals": 18
+  },
+  {
+    "value": "0xFa2B947eEc368f42195f24F36d2aF29f7c24CeC2",
+    "label": "falcon-finance",
+    "symbol": "USDf",
+    "decimals": 18
   }
 ]
