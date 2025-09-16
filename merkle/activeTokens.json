@@ -382,5 +382,11 @@
     "label": "asymmetry-finance",
     "symbol": "ASF",
     "decimals": 18
+  },
+  {
+    "value": "0x865377367054516e17014CcdED1e7d814EDC9ce4",
+    "label": "dola-usd",
+    "symbol": "DOLA",
+    "decimals": 18
   }
 ]
