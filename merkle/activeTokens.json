@@ -388,5 +388,17 @@
     "label": "dola-usd",
     "symbol": "DOLA",
     "decimals": 18
+  },
+    {
+    "value": "0x04ACaF8D2865c0714F79da09645C13FD2888977f",
+    "label": "wrapped-frax",
+    "symbol": "WFRAX",
+    "decimals": 18
+  },
+  {
+    "value": "0x01791F726B4103694969820be083196cC7c045fF",
+    "label": "yield-basis",
+    "symbol": "YB",
+    "decimals": 18
   }
 ]
