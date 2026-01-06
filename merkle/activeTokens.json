@@ -400,5 +400,11 @@
     "label": "yield-basis",
     "symbol": "YB",
     "decimals": 18
+  },
+  {
+    "value": "0xC0c17dD08263C16f6b64E772fB9B723Bf1344DdF",
+    "label": "precious-metals-usd",
+    "symbol": "pmUSD",
+    "decimals": 18
   }
 ]
