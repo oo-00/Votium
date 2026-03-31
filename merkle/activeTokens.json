@@ -412,5 +412,11 @@
     "label": "tbtc",
     "symbol": "tBTC",
     "decimals": 18
+  },
+  {
+    "value": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+    "label": "resupply-usd",
+    "symbol": "reUSD",
+    "decimals": 18
   }
 ]
