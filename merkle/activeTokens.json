@@ -418,5 +418,11 @@
     "label": "resupply-usd",
     "symbol": "reUSD",
     "decimals": 18
+  },
+  {
+    "value": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+    "label": "liquity-bold-2",
+    "symbol": "BOLD",
+    "decimals": 18
   }
 ]
