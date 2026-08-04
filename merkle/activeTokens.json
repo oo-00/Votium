@@ -424,5 +424,11 @@
     "label": "liquity-bold-2",
     "symbol": "BOLD",
     "decimals": 18
+  },
+  {
+    "value": "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+    "label": "frax-usd",
+    "symbol": "frxUSD",
+    "decimals": 18
   }
 ]
