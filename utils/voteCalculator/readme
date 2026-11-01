@@ -1,7 +1,0 @@
-save this folder
-
-run `npm i`
-
-edit infura.json to provide your infura key, or edit calculateVote.js to substitute the provider for your own node
-
-save and then run `node calculateVote.js`

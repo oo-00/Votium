@@ -1,13 +1,15 @@
 {
 	"name": "votium-vote-calc",
-	"version": "1.0.0",
-	"description": "live snapshot vote calculator for votium rewards",
+	"version": "2.0.0",
+	"description": "live vote calculator for votium rewards",
 	"main": "calculateVote.js",
+	"private": true,
+	"engines": {
+		"node": ">=18"
+	},
 	"dependencies": {
-		"ethers": "^5.4.7",
-		"graphql": "^15.6.0",
-		"graphql-request": "^3.6.1",
-		"node-fetch": "^2.6.5",
-		"web3": "^1.5.3"
-	}
+		"ethers": "^6.17.0",
+		"votium.js": "github:oo-00/votium.js#v2.3.0"
+	},
+	"license": "MIT"
 }
