@@ -1,0 +1,46 @@
+# Build and tests for the opt-out registry. The default profile runs the stateful invariant
+# campaign (generates its own call sequences and shrinks failures) and the state-machine tests;
+# the integration profile runs the fork tests against live Convex contracts.
+[profile.default]
+src = "contracts"
+test = "test/foundry"
+out = "forge-out"
+libs = ["lib"]
+cache_path = "forge-cache"
+solc = "0.8.28"
+optimizer = true
+optimizer_runs = 200
+evm_version = "cancun"
+fs_permissions = [{ access = "read", path = "./" }]
+
+# Long state-machine runs execute thousands of operations inside a single test function, so this
+# raises Foundry's default per-test gas limit of 2^30. It has no bearing on deployment or on what
+# any call costs in production. It applies to every test in the suite, so it would also hide a gas
+# regression large enough to blow the default limit.
+gas_limit = "18446744073709551615"
+
+[profile.default.invariant]
+runs = 32
+# Depth is per-run call budget shared across every targeted selector, so it has to grow when
+# actions are added or each one lands fewer times. 64 keeps per-action coverage where it was at
+# 48 with seven selectors; there are nine now.
+depth = 64
+fail_on_revert = false
+call_override = false
+shrink_run_limit = 2000
+
+# The integration test compiles Votium's reference contracts, which exceed the stack limit
+# without the IR pipeline. Confined to its own profile so the default build stays fast.
+[profile.integration]
+via_ir = true
+test = "test/integration"
+
+# Deeper campaign: forge test --profile deep
+[profile.deep.invariant]
+runs = 128
+depth = 128
+fail_on_revert = false
+shrink_run_limit = 5000
+
+# No [rpc_endpoints]: the tests read FORK_RPC_URL themselves via vm.envOr, so that they
+# fall back to a public default without requiring any local configuration.

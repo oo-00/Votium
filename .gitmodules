@@ -1,0 +1,3 @@
+[submodule "opt-out-registry/lib/forge-std"]
+	path = opt-out-registry/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
