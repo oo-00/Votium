@@ -430,5 +430,11 @@
     "label": "frax-usd",
     "symbol": "frxUSD",
     "decimals": 18
+  },
+  {
+    "value": "0xD0a32F6d4850F9D6DF7d4F8f84af1Fcd3Cf993CC",
+    "label": "swandao",
+    "symbol": "SWAN",
+    "decimals": 18
   }
 ]
